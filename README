@@ -1,0 +1,46 @@
+General Instructions
+********************
+
+Copyright (C) 2009 Federico Simoncelli <federico.simoncelli@nethesis.it>
+
+This file is free documentation; the Free Software Foundation gives
+unlimited permission to copy, distribute and modify it.
+
+Build Requirements
+==================
+The build has been tested on CentOS 5.3 with:
+
+  openais-0.80
+  openais-devel-0.80
+  libvirt-0.6.4 (built from fedora sources)
+  libvirt-devel-0.6.4 (built from fedora sources)
+
+The sources should compile with previous libvirt version too.
+
+Build Instructions
+==================
+
+Building from the repository (requires autoreconf):
+
+  $ ./build
+
+Basic Usage
+===========
+
+The daemon requires openais and libvirtd up and running. It has been tested on
+CentOS 5.3 with openais-0.80.3-22 and libvirt-0.6.4 (built from fedora sources).
+
+Run cluvirtd on each cluster node:
+
+  # cluvirtd
+
+To query the current status read the output from the daemon socket:
+
+  # nc -U /var/run/cluvirtd.sock
+
+Usage Example
+=============
+
+  # cluvirtd &
+  # nc -U /var/run/cluvirtd.sock
+
