@@ -28,114 +28,43 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <sys/un.h>
 
 #include "utils.h"
-#include "cluster.h"
 #include "status.h"
-#include "group.h"
-#include "socket.h"
+#include "cluster.h"
 
 
-#define MESSAGE_BUFFER_SIZE     1024
-#define STATUS_BUFFER_SIZE      32
-
+#define SELECT_FD_BUFFER_SIZE   32
 #define CONTROL_SOCKET_PATH     "/var/run/cluvirtd.sock"
 
 
-void send_mcast_status()
-{
-    int msg_size = 0, msg_offset, vm_num, i;
-    char mcast_msg[MESSAGE_BUFFER_SIZE];
-    domain_status_t status_vm[STATUS_BUFFER_SIZE];
-    
-    vm_num = domain_status_fetch(status_vm, STATUS_BUFFER_SIZE);
-    
-    for (i = 0; i < vm_num; i++) {
-        msg_offset = domain_status_to_msg(&status_vm[i],
-                mcast_msg + msg_size, MESSAGE_BUFFER_SIZE - msg_size);
-        
-        if (msg_offset < 0) {
-            log_error("unable to process vm '%s'", status_vm[i].name);
-            goto clean_exit1;
-        }
-        
-        msg_size += msg_offset;
-    }
-
-    send_message(mcast_msg, msg_size);
-
-clean_exit1:
-    for (i = 0; i < vm_num; i++) {
-        domain_status_free(&status_vm[i]);
-    }
-}
-
 void main_loop()
 {
-    int csy_fd, ctl_fd, max_fd;
-    fd_set readfds, exceptfds;
-    time_t lastmsg = 0, now;
-    
-    if ((csy_fd = setup_cpg()) < 0) {
+    int             fd_csync, fd_max;
+    fd_set          readfds;
+    struct timeval  select_timeout;
+ 
+    if ((fd_csync = setup_cpg()) < 0) {
         log_error("unable to initialize openais: %i", errno);
         exit(EXIT_FAILURE);
     }
     
-    if ((ctl_fd = socket_unix(CONTROL_SOCKET_PATH)) < 0) {
-        log_error("unable to initialize control socket: %i", errno);
-        exit(EXIT_FAILURE);
-    }
-    
-    max_fd = (csy_fd > ctl_fd ? csy_fd : ctl_fd) + 1;
-    
+    fd_max = fd_csync + 1;
     FD_ZERO(&readfds);
-    FD_ZERO(&exceptfds);
     
     while (1) {
-        struct timeval tv;
+        select_timeout.tv_sec   = 5;
+        select_timeout.tv_usec  = 0;
         
-        time(&now);
+        FD_SET(fd_csync, &readfds);
         
-        if ((now - lastmsg) > 5) {
-            send_mcast_status();
-            time(&lastmsg);
-        }
-        
-        FD_SET(csy_fd, &readfds);
-        FD_SET(ctl_fd, &readfds);
-        
-        tv.tv_sec = 1;
-        tv.tv_usec = 0;
-        
-        select(max_fd, &readfds, 0, &exceptfds, &tv);
+        select(fd_max, &readfds, 0, 0, &select_timeout);
 
-        if (FD_ISSET(csy_fd, &readfds)) {
+        domain_status_update();
+        
+        if (FD_ISSET(fd_csync, &readfds)) {
             if (cpg_dispatch(daemon_handle, CPG_DISPATCH_ALL) != CPG_OK) {
                 error(1, errno, "Unable to dispatch");
             }
         }
-        if (FD_ISSET(ctl_fd, &readfds)) {
-            int fd = 0;
-            FILE *f;
-            struct sockaddr_un remote;
-            socklen_t addrlen;
-            
-            if ((fd = accept(ctl_fd,
-                    (struct sockaddr*) &remote, &addrlen)) < 0) {
-                goto clean_loop1; 
-            }
-            
-            if ((f = fdopen(fd, "w")) == 0) {
-                goto clean_loop1; 
-            }
-            
-            group_print_all(f);
-            
-            fclose(f);
-            
-            close(fd);
-        }
-
-clean_loop1:        
-        continue; // FIXME: workaround for "label at end of compound statement"
     }
 }
 

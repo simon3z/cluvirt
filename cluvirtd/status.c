@@ -38,18 +38,140 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define XPATH_VNC_PORT          \
     "string(/domain/devices/graphics[@type='vnc']/@port)"
 
+#define LIBVIRT_ID_BUFFER_SIZE  64
 
-static int _domain_status_vncport(virDomainPtr *domain, domain_status_t *vm)
+
+struct domain_info_head_t di_head = LIST_HEAD_INITIALIZER();
+
+
+static int _libvirt_vncport(virDomain *);
+
+
+int domain_status_update()
 {
-    char *doc;
+    virConnect      *lvh;
+    int             id[LIBVIRT_ID_BUFFER_SIZE], n, i;
+    time_t          updtime;    
+    domain_info_t   *d, *j;
     
-    xmlDocPtr xml;
-    xmlXPathContextPtr ctxt;
-    xmlXPathObjectPtr obj;
+    if ((lvh = virConnectOpen(LIBVIRT_URI)) == 0) {
+        log_error("unable to connect to libvirtd: %i", errno);
+        return -1;
+    }
     
-    vm->vncport = -1;
+    if ((n = virConnectNumOfDomains(lvh)) < 0) {
+        log_error("unable to count the domains: %i", n);
+        goto clean_exit1;
+    }
     
-    if ((doc = virDomainGetXMLDesc(*domain, VIR_DOMAIN_XML_SECURE)) == 0) {
+    if (n > LIBVIRT_ID_BUFFER_SIZE) {
+        log_error("id buffer size not large enough: %i", n);
+        goto clean_exit1;
+    }
+
+    if ((n = virConnectListDomains(lvh, id, n)) < 0) {
+        log_error("unable to fetch domains list: %i", n);
+        goto clean_exit1;
+    }
+    
+    time(&updtime);
+    
+    for (i = 0; i < n; i++) {
+        virDomain       *lv_domain;
+        virDomainInfo   lv_info;
+        
+        if ((lv_domain = virDomainLookupByID(lvh, id[i])) == 0) {
+            log_error("unable to lookup domain %i", id[i]);
+            continue;
+        }
+        
+        if (virDomainGetInfo(lv_domain, &lv_info) < 0) {
+            log_error("unable to get info for domain %i", id[i]);
+            goto clean_loop1;
+        }
+        
+        LIST_FOREACH(d, &di_head, next) {
+            if (d->id == id[i]) break;
+        }
+        
+        if (d == 0) {
+            const char *vm_name;
+
+            log_debug("adding new domain info: %i", id[i]);
+            
+            d = malloc(sizeof(domain_info_t));
+            LIST_INSERT_HEAD(&di_head, d, next);
+            
+            d->id               = id[i];
+            
+            /* the following values won't be updated anymore */
+            
+            if ((vm_name = virDomainGetName(lv_domain)) == 0) {
+                d->name         = strdup("(unknown)");
+            }
+            else {
+                d->name         = strdup(vm_name);
+            }
+            
+            d->status.memory    = lv_info.memory;
+            d->status.ncpu      = lv_info.nrVirtCpu;
+            d->status.vncport   = _libvirt_vncport(lv_domain);
+            
+            /* initializing cpu load parameters */
+            d->status.usage     = 0;
+            d->status.cputime   = lv_info.cpuTime;
+            d->update           = updtime;
+        }
+
+        /* these values will be updated at each call */
+        d->status.state     = lv_info.state;
+
+        if ((d->update - updtime) > 0) { /* avoiding divide by-zero */
+            d->status.usage     = 
+                    ((d->status.cputime - lv_info.cpuTime) / 10000000ull) /
+                    (d->update - updtime);
+        }
+
+        d->status.cputime   = lv_info.cpuTime;
+        d->update           = updtime;
+
+clean_loop1:
+        virDomainFree(lv_domain);
+    }
+    
+    /* cleaning up old domains */
+    for (j = d = LIST_FIRST(&di_head); d; j = d) {
+        d = LIST_NEXT(d, next);
+        
+        for (i = 0; i < n; i++) {
+            if (j->id == id[i]) break;
+        }
+        
+        if (i >= n) {
+            log_debug("removing old domain info: %i", j->id);
+            LIST_REMOVE(j, next);
+            free(j->name);
+            free(j);
+        }
+    }
+
+clean_exit1:
+    if (virConnectClose(lvh) != 0) {
+        log_error("error closing libvirt: %p", lvh);
+    }
+
+    return 0;
+}
+
+static int _libvirt_vncport(virDomain *domain)
+{
+    char                *doc;
+    xmlDoc              *xml;
+    xmlXPathContext     *ctxt;
+    xmlXPathObject      *obj;
+    int                 port = -1;
+    
+    if ((doc = virDomainGetXMLDesc(domain, VIR_DOMAIN_XML_SECURE)) == 0) {
         log_error("failed to dump xml: %i", errno);
         return -1;
     }
@@ -71,7 +193,8 @@ static int _domain_status_vncport(virDomainPtr *domain, domain_status_t *vm)
         goto clean_exit3;
     }
     
-    vm->vncport = atoi((char*) obj->stringval);
+    port = atoi((char*) obj->stringval);
+
     xmlXPathFreeObject(obj);
 
 clean_exit3:
@@ -86,133 +209,40 @@ clean_exit1:
     return 0;
 }
 
-int domain_status_fetch(domain_status_t *vm, int max_vm)
+size_t domain_status_to_msg(char *msg, size_t max_size)
 {
-    int *ids, nvm, i;
+    size_t          p_offset = 1; /* FIXME: improve message type */
+    domain_info_t   *d;
     
-    virConnectPtr conn;
-    virDomainPtr domain;
-    virDomainInfo info;  
+    msg[0] = 0x00; /* FIXME: improve message type */
     
-    if ((conn = virConnectOpen("qemu:///system")) == 0) {
-        log_error("unable to connect to libvirtd: %i", errno);
-        return -1;
-    }
-    
-    if ((nvm = virConnectNumOfDomains(conn)) < 0) {
-        log_error("unable to fetch the number of domains: %i", errno);
-        goto clean_exit1;
-    }
-    
-    if ((ids = malloc(sizeof(int) * nvm)) == 0) {
-        log_error("out of memory: %i", errno);
-        exit(EXIT_FAILURE);
-    }
+    LIST_FOREACH(d, &di_head, next) {
+        size_t      name_len;
+        size_t      n_offset;
         
-    if ((nvm = virConnectListDomains(conn, ids, nvm)) < 0) {
-        log_error("unable to fetch the domains list: %i", errno);
-        goto clean_exit2;
-    }
-
-    if (nvm > max_vm) {
-        log_error("out of memory: %i vm to write in %i", nvm, max_vm);
-        goto clean_exit2;
-    }
-    
-    memset(vm, 0, sizeof(domain_status_t) * max_vm);
-
-    for (i = 0; i < nvm; i++) {
-        vm[i].id = ids[i];
+        name_len    = strlen(d->name) + 1;
+        n_offset    = p_offset + sizeof(domain_info_t) + name_len;
         
-        if ((domain = virDomainLookupByID(conn, ids[i])) == 0) {
-            log_error("unable to fetch domain %i: %i", ids[i], errno);
-            continue;
-        }
-
-        vm[i].name = strdup(virDomainGetName(domain));
-       
-        if (virDomainGetInfo(domain, &info) >= 0) {
-            time_t updated  = time(0);
-            
-            vm[i].state     = info.state;
-            vm[i].memory    = info.memory;
-            vm[i].ncpu      = info.nrVirtCpu;
-            vm[i].usage     = 0;
-            vm[i].cputime   = info.cpuTime;
-            vm[i].updated   = updated;
-        }
-        else {
-            log_error("unable to fetch info for domain %i: %i", ids[i], errno);
+        if (n_offset > max_size) {
+            log_error("message buffer is not large enough: %lu", n_offset);
+            return -1;
         }
         
-        _domain_status_vncport(&domain, &vm[i]);
+        memcpy(msg + p_offset, d, sizeof(domain_info_t));
+        p_offset += sizeof(domain_info_t);
         
-        virDomainFree(domain);
-    }
-
-clean_exit2:
-    free(ids);
-    
-clean_exit1:
-    if (virConnectClose(conn) != 0) {
-        log_error("error closing connection: %i", errno);
+        memcpy(msg + p_offset, d->name, name_len);
+        
+        p_offset = n_offset;
     }
     
-    return nvm;
-}
-
-domain_status_t *domain_status_init(domain_status_t *vm)
-{
-    if (vm == 0) {
-        vm = malloc(sizeof(domain_status_t));
-    }
-    
-    memset(vm, 0, sizeof(domain_status_t));
-    vm->name = strdup("(unknown)");
-    
-    return vm;
-}
-
-void domain_status_copy(domain_status_t *dst, domain_status_t *src)
-{
-    LIST_ENTRY(_domain_status_t) tmp;
-    
-    memcpy(&tmp, &dst->next, sizeof(tmp));
-    
-    domain_status_free(dst);
-    
-    memcpy(dst, src, sizeof(domain_status_t));
-    dst->name = strdup(src->name);
-    
-    memcpy(&dst->next, &tmp, sizeof(dst->next));
-}
-
-void domain_status_free(domain_status_t *vm)
-{
-    if (vm->name) free(vm->name);
-    vm->name = 0;
-}
-
-int domain_status_to_msg(domain_status_t *vm, char *msg, int max_size)
-{
-    int name_len = strlen(vm->name) + 1;
-    int msg_len = sizeof(domain_status_t) + name_len;
-    domain_status_t *msg_vm = (domain_status_t *) msg;
-    
-    if (msg_len > max_size) return -1;
-
-    memcpy(msg, vm, sizeof(domain_status_t));
-    memcpy(msg + sizeof(domain_status_t), vm->name, name_len);
-
-    memset(&msg_vm->next, 0, sizeof(vm->next));
-    msg_vm->name = 0;
-    msg_vm->rcvtime = 0;
-    
-    return msg_len;
+    return p_offset;
 }
 
 int domain_status_from_msg(char *msg, domain_status_t *vm)
 {
+/*  FIXME: re-implement and move to libraries */
+/*
     char *msg_name = msg + sizeof(domain_status_t);
     
     memcpy(vm, msg, sizeof(domain_status_t));
@@ -221,5 +251,7 @@ int domain_status_from_msg(char *msg, domain_status_t *vm)
     vm->name = msg_name;
     
     return (sizeof(domain_status_t) + strlen(msg_name) + 1);
+*/
+    return 0;
 }
 

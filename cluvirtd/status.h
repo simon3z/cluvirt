@@ -20,29 +20,35 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #ifndef __STATUS_H_
 #define __STATUS_H_
 
+#include <stdint.h>
 #include <sys/queue.h>
 
+
 typedef struct _domain_status_t {
-    LIST_ENTRY(_domain_status_t)    next;
-    int                             id;
-    char                            *name;
-    char                            state;
-    unsigned long                   memory;
-    unsigned short                  ncpu;
-    unsigned short                  vncport;
-    unsigned long long              cputime;
-    int                             usage;
-    time_t                          updated;
-    time_t                          rcvtime;
+    uint8_t                         state;
+    uint8_t                         usage;
+    uint32_t                        memory;
+    uint16_t                        ncpu;
+    uint16_t                        vncport;
+    uint64_t                        cputime;
 } domain_status_t;
 
-domain_status_t *domain_status_init(domain_status_t *);
+typedef struct _domain_info_t {
+    uint32_t                        id;
+    uint32_t                        update;
+    char                            *name;
+    domain_status_t                 status;
+    LIST_ENTRY(_domain_info_t)      next;
+} domain_info_t;
 
-int     domain_status_fetch(domain_status_t *, int);
-void    domain_status_copy(domain_status_t *, domain_status_t *);
-void    domain_status_free(domain_status_t *);
 
-int     domain_status_to_msg(domain_status_t *, char *, int);
+extern LIST_HEAD(domain_info_head_t, _domain_info_t) di_head;
+
+
+int     domain_status_update();
+
+int     domain_status_to_msg(char *, size_t);
 int     domain_status_from_msg(char *, domain_status_t *);
+
 
 #endif
