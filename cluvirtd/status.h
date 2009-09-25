@@ -47,8 +47,8 @@ extern LIST_HEAD(domain_info_head_t, _domain_info_t) di_head;
 
 int     domain_status_update();
 
-int     domain_status_to_msg(char *, size_t);
-int     domain_status_from_msg(char *, domain_status_t *);
+size_t  domain_status_to_msg(char *, size_t);
+size_t  domain_status_from_msg(char *, domain_status_t *);
 
 
 #endif

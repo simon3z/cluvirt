@@ -239,7 +239,7 @@ size_t domain_status_to_msg(char *msg, size_t max_size)
     return p_offset;
 }
 
-int domain_status_from_msg(char *msg, domain_status_t *vm)
+size_t domain_status_from_msg(char *msg, domain_status_t *vm)
 {
 /*  FIXME: re-implement and move to libraries */
 /*
