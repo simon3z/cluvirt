@@ -42,13 +42,13 @@ typedef struct _domain_info_t {
 } domain_info_t;
 
 
-extern LIST_HEAD(domain_info_head_t, _domain_info_t) di_head;
+typedef LIST_HEAD(_domain_info_head_t, _domain_info_t) domain_info_head_t;
 
 
-int     domain_status_update();
+int     domain_status_update(domain_info_head_t *);
 
-size_t  domain_status_to_msg(char *, size_t);
-size_t  domain_status_from_msg(char *, domain_status_t *);
+size_t  domain_status_to_msg(domain_info_head_t *, char *, size_t);
+size_t  domain_status_from_msg(domain_info_head_t *, char *, domain_status_t *);
 
 
 #endif

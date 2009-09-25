@@ -23,22 +23,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <openais/cpg.h>
 
 
-#define CLUVIRTD_MAGIC      0x43560001
+#define CLUVIRT_GROUP_NAME      "cluvirtd"
 
 
-void cpg_deliver(cpg_handle_t,
-    struct cpg_name *, uint32_t, uint32_t, void *, int);
-
-void cpg_confchg(cpg_handle_t,
-    struct cpg_name*, struct cpg_address*, int,
-    struct cpg_address*, int, struct cpg_address*, int);
-
-
-extern cpg_handle_t     daemon_handle;
-
-
-int setup_cpg();
-int send_message(void *, int);
+int setup_cpg(cpg_handle_t *, cpg_callbacks_t *);
+int send_message(cpg_handle_t *, void *, int);
 
 
 #endif

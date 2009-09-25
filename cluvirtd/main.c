@@ -27,14 +27,59 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include <sys/un.h>
 
-#include "utils.h"
 #include "status.h"
 #include "cluster.h"
+#include "utils.h"
 
 
-#define SELECT_FD_BUFFER_SIZE   32
+#define MESSAGE_BUFFER_SIZE     1024
 #define CONTROL_SOCKET_PATH     "/var/run/cluvirtd.sock"
 
+
+cpg_handle_t        daemon_handle;
+domain_info_head_t  di_head = LIST_HEAD_INITIALIZER();
+
+
+void cpg_deliver(
+        cpg_handle_t, struct cpg_name *, uint32_t, uint32_t, void *, int);
+
+void cpg_confchg(
+        cpg_handle_t, struct cpg_name *, struct cpg_address *, int,
+        struct cpg_address *, int, struct cpg_address *, int);
+
+
+static cpg_callbacks_t cpg_callbacks = {
+    .cpg_deliver_fn = cpg_deliver,
+    .cpg_confchg_fn = cpg_confchg
+};
+
+
+void cpg_deliver(cpg_handle_t handle,
+        struct cpg_name *group_name, uint32_t nodeid,
+        uint32_t pid, void *msg, int msg_len)
+{
+    size_t      msg_size;
+    char        reply_msg[MESSAGE_BUFFER_SIZE];
+    uint32_t    cmd;
+    
+    cmd = *(uint32_t*) msg;
+    
+    if (cmd == 0x01) {
+        msg_size = domain_status_to_msg(
+                        &di_head, reply_msg, MESSAGE_BUFFER_SIZE);
+        log_debug("sending domain info: %lu", msg_size);
+        send_message(&daemon_handle, reply_msg, msg_size);
+    }
+}
+
+void cpg_confchg(cpg_handle_t handle,
+        struct cpg_name *group_name,
+        struct cpg_address *member_list, int member_list_entries,
+        struct cpg_address *left_list, int left_list_entries,
+        struct cpg_address *joined_list, int joined_list_entries)
+{
+    return;
+}
 
 void main_loop()
 {
@@ -42,7 +87,7 @@ void main_loop()
     fd_set          readfds;
     struct timeval  select_timeout;
  
-    if ((fd_csync = setup_cpg()) < 0) {
+    if ((fd_csync = setup_cpg(&daemon_handle, &cpg_callbacks)) < 0) {
         log_error("unable to initialize openais: %i", errno);
         exit(EXIT_FAILURE);
     }
@@ -58,7 +103,7 @@ void main_loop()
         
         select(fd_max, &readfds, 0, 0, &select_timeout);
 
-        domain_status_update();
+        domain_status_update(&di_head);
         
         if (FD_ISSET(fd_csync, &readfds)) {
             if (cpg_dispatch(daemon_handle, CPG_DISPATCH_ALL) != CPG_OK) {

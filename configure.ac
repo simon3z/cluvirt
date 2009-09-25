@@ -2,13 +2,14 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT([cluvirtd], [0.1.0], [federico.simoncelli@gmail.com])
+AC_INIT([cluvirt], [master], [federico.simoncelli@gmail.com])
 AM_INIT_AUTOMAKE()
 AC_CONFIG_SRCDIR([cluvirtd/main.c], [cluvadm/main.c])
 AC_CONFIG_HEADER([config.h])
 
 # Checks for programs.
 AC_PROG_CC
+AC_PROG_LIBTOOL
 
 # Checks for x86_64 lib path.
 if test "$libdir" = "\${exec_prefix}/lib"; then
@@ -50,5 +51,10 @@ AC_FUNC_MALLOC
 AC_FUNC_SELECT_ARGTYPES
 AC_CHECK_FUNCS([memset select strdup strtol])
 
-AC_CONFIG_FILES([Makefile cluvirtd/Makefile cluvirtadm/Makefile])
+AC_CONFIG_FILES([Makefile
+                 libcluvirt/Makefile 
+                 cluvirtd/Makefile
+                 cluvirtadm/Makefile
+])
+
 AC_OUTPUT

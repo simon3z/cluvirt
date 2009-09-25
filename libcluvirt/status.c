@@ -30,8 +30,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include <libvirt/libvirt.h>
 
-#include "utils.h"
 #include "status.h"
+#include "utils.h"
 
 
 #define LIBVIRT_URI             "qemu:///system"
@@ -41,13 +41,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define LIBVIRT_ID_BUFFER_SIZE  64
 
 
-struct domain_info_head_t di_head = LIST_HEAD_INITIALIZER();
-
-
 static int _libvirt_vncport(virDomain *);
 
 
-int domain_status_update()
+int domain_status_update(domain_info_head_t *di_head)
 {
     virConnect      *lvh;
     int             id[LIBVIRT_ID_BUFFER_SIZE], n, i;
@@ -90,7 +87,7 @@ int domain_status_update()
             goto clean_loop1;
         }
         
-        LIST_FOREACH(d, &di_head, next) {
+        LIST_FOREACH(d, di_head, next) {
             if (d->id == id[i]) break;
         }
         
@@ -100,7 +97,7 @@ int domain_status_update()
             log_debug("adding new domain info: %i", id[i]);
             
             d = malloc(sizeof(domain_info_t));
-            LIST_INSERT_HEAD(&di_head, d, next);
+            LIST_INSERT_HEAD(di_head, d, next);
             
             d->id               = id[i];
             
@@ -140,7 +137,7 @@ clean_loop1:
     }
     
     /* cleaning up old domains */
-    for (j = d = LIST_FIRST(&di_head); d; j = d) {
+    for (j = d = LIST_FIRST(di_head); d; j = d) {
         d = LIST_NEXT(d, next);
         
         for (i = 0; i < n; i++) {
@@ -209,14 +206,15 @@ clean_exit1:
     return 0;
 }
 
-size_t domain_status_to_msg(char *msg, size_t max_size)
+size_t domain_status_to_msg(
+        domain_info_head_t *di_head, char *msg, size_t max_size)
 {
     size_t          p_offset = 1; /* FIXME: improve message type */
     domain_info_t   *d;
     
     msg[0] = 0x00; /* FIXME: improve message type */
     
-    LIST_FOREACH(d, &di_head, next) {
+    LIST_FOREACH(d, di_head, next) {
         size_t      name_len;
         size_t      n_offset;
         
@@ -239,7 +237,8 @@ size_t domain_status_to_msg(char *msg, size_t max_size)
     return p_offset;
 }
 
-size_t domain_status_from_msg(char *msg, domain_status_t *vm)
+size_t domain_status_from_msg(
+        domain_info_head_t *di_head, char *msg, domain_status_t *vm)
 {
 /*  FIXME: re-implement and move to libraries */
 /*
