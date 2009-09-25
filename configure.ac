@@ -10,6 +10,15 @@ AC_CONFIG_HEADER([config.h])
 # Checks for programs.
 AC_PROG_CC
 
+# Checks for x86_64 lib path.
+if test "$libdir" = "\${exec_prefix}/lib"; then
+  if test -e "/usr/lib64"; then
+	 libdir="/usr/lib64"
+  else
+	 libdir="/usr/lib"
+  fi   
+fi
+
 # Checks for libraries.
 LDFLAGS="$LDFLAGS -L${libdir}/openais"
 AC_CHECK_LIB([cpg], [cpg_initialize],,
@@ -41,5 +50,5 @@ AC_FUNC_MALLOC
 AC_FUNC_SELECT_ARGTYPES
 AC_CHECK_FUNCS([memset select strdup strtol])
 
-AC_CONFIG_FILES([Makefile cluvirtd/Makefile cluvadm/Makefile])
+AC_CONFIG_FILES([Makefile cluvirtd/Makefile cluvirtadm/Makefile])
 AC_OUTPUT

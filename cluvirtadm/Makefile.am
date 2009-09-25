@@ -3,7 +3,7 @@ MAINTAINERCLEANFILES	= Makefile.in
 
 AM_CPPFLAGS		= -Wall -Werror -Wshadow -O2
 
-bin_PROGRAMS		= cluvadm
+bin_PROGRAMS		= cluvirtadm
 
-cluvadm_SOURCES		= main.c
+cluvirtadm_SOURCES	= main.c
 

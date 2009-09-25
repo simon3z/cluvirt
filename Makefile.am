@@ -5,5 +5,5 @@ MAINTAINERCLEANFILES	= aclocal.m4 configure depcomp \
 			  compile config.h.in config.h.in~ \
 			  Makefile.in
 
-SUBDIRS                 = cluvirtd cluvadm
+SUBDIRS                 = cluvirtd cluvirtadm
 
