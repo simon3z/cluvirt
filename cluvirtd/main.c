@@ -25,33 +25,16 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <errno.h>
 #include <error.h>
 
-#include <sys/un.h>
-
 #include "status.h"
 #include "cluster.h"
 #include "utils.h"
 
 
 #define MESSAGE_BUFFER_SIZE     1024
-#define CONTROL_SOCKET_PATH     "/var/run/cluvirtd.sock"
 
 
 cpg_handle_t        daemon_handle;
 domain_info_head_t  di_head = LIST_HEAD_INITIALIZER();
-
-
-void cpg_deliver(
-        cpg_handle_t, struct cpg_name *, uint32_t, uint32_t, void *, int);
-
-void cpg_confchg(
-        cpg_handle_t, struct cpg_name *, struct cpg_address *, int,
-        struct cpg_address *, int, struct cpg_address *, int);
-
-
-static cpg_callbacks_t cpg_callbacks = {
-    .cpg_deliver_fn = cpg_deliver,
-    .cpg_confchg_fn = cpg_confchg
-};
 
 
 void cpg_deliver(cpg_handle_t handle,
@@ -60,15 +43,13 @@ void cpg_deliver(cpg_handle_t handle,
 {
     size_t      msg_size;
     char        reply_msg[MESSAGE_BUFFER_SIZE];
-    uint32_t    cmd;
     
-    cmd = *(uint32_t*) msg;
-    
-    if (cmd == 0x01) {
+    if (((char*)msg)[0] == 0x01) { /* FIXME: improve message type */
+        reply_msg[0] = 0x00;
         msg_size = domain_status_to_msg(
-                        &di_head, reply_msg, MESSAGE_BUFFER_SIZE);
+                        &di_head, &reply_msg[1], MESSAGE_BUFFER_SIZE - 1);
         log_debug("sending domain info: %lu", msg_size);
-        send_message(&daemon_handle, reply_msg, msg_size);
+        send_message(&daemon_handle, reply_msg, msg_size + 1);
     }
 }
 
@@ -80,6 +61,12 @@ void cpg_confchg(cpg_handle_t handle,
 {
     return;
 }
+
+
+static cpg_callbacks_t cpg_callbacks = {
+    .cpg_deliver_fn = cpg_deliver, .cpg_confchg_fn = cpg_confchg
+};
+
 
 void main_loop()
 {

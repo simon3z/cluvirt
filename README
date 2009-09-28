@@ -15,14 +15,16 @@ The build has been tested on CentOS 5.3 with:
   libvirt-0.6.4 (built from fedora sources)
   libvirt-devel-0.6.4 (built from fedora sources)
 
-The sources should compile with previous libvirt version too.
+The sources should compile with previous libvirt versions down to 0.3.x.
 
 Build Instructions
 ==================
 
 Building from the repository (requires autoreconf):
 
-  $ ./build
+  $ ./autogen.sh
+  $ ./configure
+  $ make
 
 Basic Usage
 ===========
@@ -34,13 +36,18 @@ Run cluvirtd on each cluster node:
 
   # cluvirtd
 
-To query the current status read the output from the daemon socket:
+To query the current status:
 
-  # nc -U /var/run/cluvirtd.sock
+  # cluvirtadm
 
 Usage Example
 =============
 
   # cluvirtd &
-  # nc -U /var/run/cluvirtd.sock
+  # cluvirtadm
+  node id: 1, host: nvc1
+    vm id: 2, name: demo1, vnc: 5901, cpu: 2%
+    vm id: 52, name: efw, vnc: 5903, cpu: 0%
+  node id: 2, host: nvc2
+    vm id: 4, name: nserv1, vnc: 5902, cpu: 11%
 

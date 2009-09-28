@@ -122,15 +122,15 @@ int domain_status_update(domain_info_head_t *di_head)
 
         /* these values will be updated at each call */
         d->status.state     = lv_info.state;
-
-        if ((d->update - updtime) > 0) { /* avoiding divide by-zero */
+        
+        if ((updtime - d->update) > 0) { /* avoiding divide by-zero */
             d->status.usage     = 
-                    ((d->status.cputime - lv_info.cpuTime) / 10000000ull) /
-                    (d->update - updtime);
-        }
+                    (lv_info.cpuTime - d->status.cputime) /
+                    ((updtime - d->update) * 10000000ull);
 
-        d->status.cputime   = lv_info.cpuTime;
-        d->update           = updtime;
+            d->status.cputime   = lv_info.cpuTime;
+            d->update           = updtime;
+        }
 
 clean_loop1:
         virDomainFree(lv_domain);
@@ -203,16 +203,14 @@ clean_exit2:
 clean_exit1:
     free(doc);
 
-    return 0;
+    return port;
 }
 
 size_t domain_status_to_msg(
         domain_info_head_t *di_head, char *msg, size_t max_size)
 {
-    size_t          p_offset = 1; /* FIXME: improve message type */
+    size_t          p_offset = 0;
     domain_info_t   *d;
-    
-    msg[0] = 0x00; /* FIXME: improve message type */
     
     LIST_FOREACH(d, di_head, next) {
         size_t      name_len;
@@ -238,19 +236,23 @@ size_t domain_status_to_msg(
 }
 
 size_t domain_status_from_msg(
-        domain_info_head_t *di_head, char *msg, domain_status_t *vm)
+        domain_info_head_t *di_head, char *msg, size_t msg_size)
 {
-/*  FIXME: re-implement and move to libraries */
-/*
-    char *msg_name = msg + sizeof(domain_status_t);
+    size_t          p_offset = 0;
+    domain_info_t   *d;
     
-    memcpy(vm, msg, sizeof(domain_status_t));
-    memset(&vm->next, 0, sizeof(vm->next));
-    
-    vm->name = msg_name;
-    
-    return (sizeof(domain_status_t) + strlen(msg_name) + 1);
-*/
-    return 0;
+    while (p_offset + sizeof(domain_info_t) < msg_size) {
+        d = malloc(sizeof(domain_info_t));
+        
+        memcpy(d, msg + p_offset, sizeof(domain_info_t));
+        p_offset    += sizeof(domain_info_t);
+        
+        LIST_INSERT_HEAD(di_head, d, next);
+
+        d->name      = strdup(msg + p_offset);        
+        p_offset    += strlen(msg + p_offset) + 1;
+    }
+
+    return p_offset;
 }
 

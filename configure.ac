@@ -22,11 +22,14 @@ fi
 
 # Checks for libraries.
 LDFLAGS="$LDFLAGS -L${libdir}/openais"
+AC_CHECK_LIB([pthread], [pthread_create],,
+    [AC_MSG_ERROR([libpthread is missing])]
+)
 AC_CHECK_LIB([cpg], [cpg_initialize],,
     [AC_MSG_ERROR([libcpg is missing])]
 )
-AC_CHECK_LIB([pthread], [pthread_create],,
-    [AC_MSG_ERROR([libpthread is missing])]
+AC_CHECK_LIB([cman], [cman_init],,
+    [AC_MSG_ERROR([libcman is missing])]
 )
 
 # Checks for pkg-config modules.
@@ -38,6 +41,9 @@ AC_HEADER_STDC
 AC_CHECK_HEADERS([stdlib.h string.h syslog.h unistd.h])
 AC_CHECK_HEADERS([openais/cpg.h],,
     [AC_MSG_ERROR([openais/cpg.h header is missing])]
+)
+AC_CHECK_HEADERS([libcman.h],,
+    [AC_MSG_ERROR([libcman.h header is missing])]
 )
 
 # Checks for typedefs, structures, and compiler characteristics.
