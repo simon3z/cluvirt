@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT([cluvirt], [master], [federico.simoncelli@gmail.com])
+AC_INIT([cluvirt], [master], [federico.simoncelli@nethesis.it])
 AM_INIT_AUTOMAKE()
 AC_CONFIG_SRCDIR([cluvirtd/main.c], [cluvadm/main.c])
 AC_CONFIG_HEADER([config.h])
