@@ -26,8 +26,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define CLUVIRT_GROUP_NAME      "cluvirtd"
 
 
-int setup_cpg(cpg_handle_t *, cpg_callbacks_t *);
-int send_message(cpg_handle_t *, void *, int);
+int setup_cpg(cpg_callbacks_t *);
+void dispatch_message(void);
+int send_message(void *, int);
 
 
 #endif

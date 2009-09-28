@@ -30,19 +30,22 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "utils.h"
 
 
-int setup_cpg(cpg_handle_t *daemon_handle, cpg_callbacks_t *cpg_callbacks)
+static cpg_handle_t daemon_handle;
+static struct cpg_name daemon_name;
+
+
+int setup_cpg(cpg_callbacks_t *cpg_callbacks)
 {
     int fd = 0;
     cpg_error_t err;
-    static struct cpg_name daemon_name;
 
-    err = cpg_initialize(daemon_handle, cpg_callbacks);
+    err = cpg_initialize(&daemon_handle, cpg_callbacks);
     if (err != CPG_OK) {
             log_debug("cpg_initialize error %d", err);
             return -1;
     }
 
-    cpg_fd_get(*daemon_handle, &fd);
+    cpg_fd_get(daemon_handle, &fd);
     
     if (fd < 0) {
             log_debug("cpg_fd_get error %d", err);
@@ -54,7 +57,7 @@ int setup_cpg(cpg_handle_t *daemon_handle, cpg_callbacks_t *cpg_callbacks)
     daemon_name.length = strlen(CLUVIRT_GROUP_NAME);
 
 retry:
-    err = cpg_join(*daemon_handle, &daemon_name);
+    err = cpg_join(daemon_handle, &daemon_name);
 
     if (err == CPG_ERR_TRY_AGAIN) { 
             sleep(1);
@@ -62,7 +65,7 @@ retry:
     }
     if (err != CPG_OK) {
             log_debug("cpg_join error %d", err);
-            cpg_finalize(*daemon_handle);
+            cpg_finalize(daemon_handle);
             return -1;
     }
 
@@ -70,7 +73,14 @@ retry:
     return fd;
 }
 
-int send_message(cpg_handle_t *daemon_handle, void *buf, int len)
+void dispatch_message(void)
+{
+    if (cpg_dispatch(daemon_handle, CPG_DISPATCH_ALL) != CPG_OK) {
+        log_error("unable to dispatch: %i", errno);
+    }
+}
+
+int send_message(void *buf, int len)
 {
     struct iovec iov;
     cpg_error_t err;
@@ -80,7 +90,7 @@ int send_message(cpg_handle_t *daemon_handle, void *buf, int len)
     iov.iov_len = len;
 
 retry: 
-    err = cpg_mcast_joined(*daemon_handle, CPG_TYPE_AGREED, &iov, 1);
+    err = cpg_mcast_joined(daemon_handle, CPG_TYPE_AGREED, &iov, 1);
     
     if (err == CPG_ERR_TRY_AGAIN) {
             retries++;
@@ -91,7 +101,7 @@ retry:
     }
     if (err != CPG_OK) {
             log_error("error %d handle %llx",
-                      err, (unsigned long long) daemon_handle);
+                      err, (unsigned long long) &daemon_handle);
             return -1;
     }
 

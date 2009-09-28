@@ -53,7 +53,7 @@ int member_init_list(cluster_node_head_t *cn_head)
         cluster_node_t  *n;
         
         n = malloc(sizeof(cluster_node_t));
-        LIST_INSERT_HEAD(cn_head, n, next);
+        STAILQ_INSERT_TAIL(cn_head, n, next);
 
         n->id       = cman_nodes[i].cn_nodeid;
         n->host     = strdup(cman_nodes[i].cn_name);

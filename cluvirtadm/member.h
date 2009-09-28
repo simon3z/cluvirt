@@ -31,11 +31,11 @@ typedef struct _cluster_node_t {
     char                            *host;
     int                             joined;
     domain_info_head_t              domain;
-    LIST_ENTRY(_cluster_node_t)     next;
+    STAILQ_ENTRY(_cluster_node_t)   next;
 } cluster_node_t;
 
 
-typedef LIST_HEAD(_cluster_node_head_t, _cluster_node_t) cluster_node_head_t;
+typedef STAILQ_HEAD(_cluster_node_head_t, _cluster_node_t) cluster_node_head_t;
 
 
 int member_init_list(cluster_node_head_t *);

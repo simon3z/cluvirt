@@ -42,7 +42,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define CMDLINE_OPT_DAEMON      0x0004
 
 
-static cpg_handle_t        daemon_handle;
 static domain_info_head_t  di_head = LIST_HEAD_INITIALIZER();
 
 static int cmdline_flags;
@@ -61,7 +60,7 @@ void cpg_deliver(cpg_handle_t handle,
         msg_size = domain_status_to_msg(
                         &di_head, &reply_msg[1], MESSAGE_BUFFER_SIZE - 1);
         log_debug("sending domain info: %lu", msg_size);
-        send_message(&daemon_handle, reply_msg, msg_size + 1);
+        send_message(reply_msg, msg_size + 1);
     }
 }
 
@@ -156,7 +155,7 @@ void cmdline_options(char argc, char *argv[])
         }
     }
     
-    log_debug("cmdline_flags: 0x%02x", cmdline_flags);
+    log_debug("cmdline_flags: 0x%04x", cmdline_flags);
     log_debug("libvirt_uri: %s", libvirt_uri);
 
 }
@@ -173,7 +172,7 @@ void main_loop(void)
     fd_set          readfds;
     struct timeval  select_timeout;
     
-    if ((fd_csync = setup_cpg(&daemon_handle, &cpg_callbacks)) < 0) {
+    if ((fd_csync = setup_cpg(&cpg_callbacks)) < 0) {
         log_error("unable to initialize openais: %i", errno);
         exit(EXIT_FAILURE);
     }
@@ -192,9 +191,7 @@ void main_loop(void)
         domain_status_update(libvirt_uri, &di_head);
         
         if (FD_ISSET(fd_csync, &readfds)) {
-            if (cpg_dispatch(daemon_handle, CPG_DISPATCH_ALL) != CPG_OK) {
-                error(1, errno, "unable to dispatch");
-            }
+            dispatch_message();
         }
     }
 }

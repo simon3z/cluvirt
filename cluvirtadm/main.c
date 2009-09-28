@@ -20,6 +20,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <getopt.h>
 #include <errno.h>
 #include <error.h>
 
@@ -31,10 +32,14 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "utils.h"
 
 
-static cpg_handle_t         daemon_handle;
-static cluster_node_head_t  cn_head;
+#define CMDLINE_OPT_HELP        0x0001
+#define CMDLINE_OPT_DEBUG       0x0002
 
-static int group_members, group_answers;
+
+static cluster_node_head_t  cn_head = STAILQ_HEAD_INITIALIZER(cn_head);
+
+static int cmdline_flags;
+static int group_members = 0, group_answers = 0; /* FIXME: something smarter */
 
 
 void cpg_deliver(cpg_handle_t handle,
@@ -44,11 +49,11 @@ void cpg_deliver(cpg_handle_t handle,
     domain_info_t       *d;
     cluster_node_t      *n;
     
-    log_debug("receiving a message: %i", msg_len);
-    
     if (((char*)msg)[0] != 0x00) return; /* FIXME: improve message type */
     
-    LIST_FOREACH(n, &cn_head, next) {
+    log_debug("receiving a message: %i", msg_len);
+    
+    STAILQ_FOREACH(n, &cn_head, next) {
         if (n->id == nodeid) break;
     }
     
@@ -57,6 +62,12 @@ void cpg_deliver(cpg_handle_t handle,
         return;
     }
     
+    if (n->joined != 0) {
+        log_error("double answer from node %i", nodeid);
+        return;
+    }
+    
+    n->joined = 1;
     domain_status_from_msg(&n->domain, msg + 1, msg_len);
 
     group_answers++;
@@ -68,13 +79,81 @@ void cpg_confchg(cpg_handle_t handle,
         struct cpg_address *left_list, int left_list_entries,
         struct cpg_address *joined_list, int joined_list_entries)
 {
-    group_members = member_list_entries - 1;
+    if (group_members == 0) {
+        group_members = member_list_entries - 1;
+    }
 }
 
 void request_domain_info()
 {
     char request_msg[] = { 0x01 };
-    send_message(&daemon_handle, request_msg, sizeof(request_msg));
+    send_message(request_msg, sizeof(request_msg));
+}
+
+
+void print_usage(char *binpath)
+{
+    printf("Usage: %s [OPTIONS]\n", binpath);
+    printf("Virtual machines supervisor for openais cluster and libvirt.\n\n");
+    printf("  -h, --help                 display this help and exit\n");
+    printf("  -D                         debug output enabled\n");
+}
+
+void cmdline_options(char argc, char *argv[])
+{
+    int c, option_index = 0;
+    static struct option long_options[] = {
+        {"help",    no_argument,        0, 'h'},
+        {0, 0, 0, 0}
+    };
+
+    cmdline_flags = 0x00;
+
+    while (1) {    
+        c = getopt_long(argc, argv, "hD", long_options, &option_index);
+    
+        if (c == -1)
+            break;
+
+        switch (c)
+        {
+            case 'h':
+                cmdline_flags |= CMDLINE_OPT_HELP;
+
+            case 'D':
+                cmdline_flags |= CMDLINE_OPT_DEBUG;
+                break;
+        }
+    }
+    
+    log_debug("cmdline_flags: 0x%04x", cmdline_flags);
+}
+
+void print_status()
+{
+    domain_info_t   *d;
+    cluster_node_t  *n;
+
+    printf("%6.6s  %-24.24s %-8.8s\n", "ID", "Host", "Status");
+    printf("%6.6s  %-24.24s %-8.8s\n", "--", "----", "------");
+        
+    STAILQ_FOREACH(n, &cn_head, next) {
+        printf("%6.0i  %-24.24s %-8.8s\n",
+            n->id, n->host, (n->joined) ? "joined" : "missing");
+    }
+    
+    printf("\n");
+    printf("%6.6s  %-24.24s %-24.24s %6.6s %8.8s\n",
+                    "ID", "Name", "Host", "VNC#", "CPU%");
+    printf("%6.6s  %-24.24s %-24.24s %6.6s %8.8s\n",
+                    "--", "----", "----", "----", "----");
+
+    STAILQ_FOREACH(n, &cn_head, next) {
+        LIST_FOREACH(d, &n->domain, next) {
+            printf("%6.0i  %-24.24s %-24.24s %6.0i %8i\n",
+                d->id, d->name, n->host, d->status.vncport, d->status.usage);
+        }
+    }
 }
 
 
@@ -82,31 +161,13 @@ static cpg_callbacks_t cpg_callbacks = {
     .cpg_deliver_fn = cpg_deliver, .cpg_confchg_fn = cpg_confchg
 };
 
-
-int print_all()
-{
-    domain_info_t   *d;
-    cluster_node_t  *n;
-    
-    LIST_FOREACH(n, &cn_head, next) {
-        printf("node id: %i, host: %s\n", n->id, n->host);
-        LIST_FOREACH(d, &n->domain, next) {
-            printf("  vm id: %i, name: %s, vnc: %i, cpu: %i%%\n",
-                    d->id, d->name, d->status.vncport, d->status.usage);
-        }
-    }
-}
-
-int main(int argc, char *argv[])
+int main_loop(void)
 {
     int             fd_csync, fd_max;
     fd_set          readfds;
     struct timeval  select_timeout;
-
  
-    log_debug("starting cluvirtadm: %i", argc);
- 
-    if ((fd_csync = setup_cpg(&daemon_handle, &cpg_callbacks)) < 0) {
+    if ((fd_csync = setup_cpg(&cpg_callbacks)) < 0) {
         log_error("unable to initialize openais: %i", errno);
         exit(EXIT_FAILURE);
     }
@@ -127,18 +188,34 @@ int main(int argc, char *argv[])
         select(fd_max, &readfds, 0, 0, &select_timeout);
         
         if (FD_ISSET(fd_csync, &readfds)) {
-            if (cpg_dispatch(daemon_handle, CPG_DISPATCH_ALL) != CPG_OK) {
-                error(1, errno, "Unable to dispatch");
-            }
+            dispatch_message();
         }
         
-        if (group_answers >= group_members) {
+        if (group_answers >= group_members) { /* FIXME: something smarter */
             break;
         }
     }
-    
-    print_all();
+
+    print_status();
     
     return 0;
+}
+
+int main(int argc, char *argv[])
+{
+    cmdline_options(argc, argv);
+
+    if (cmdline_flags & CMDLINE_OPT_HELP) {
+        print_usage(argv[0]);
+        exit(EXIT_SUCCESS);
+    }
+    
+    if (cmdline_flags & CMDLINE_OPT_DEBUG) {
+        utils_debug = 0x01;
+    }
+    
+    main_loop();
+
+    return EXIT_SUCCESS; 
 }
 

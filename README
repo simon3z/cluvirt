@@ -35,18 +35,23 @@ Run cluvirtd on each cluster node:
 
   # cluvirtd
 
-To query the current status:
+Fetch the current status using cluvirtadm:
 
   # cluvirtadm
 
 Usage Example
 =============
 
-  # cluvirtd &
+  # cluvirtd
   # cluvirtadm
-  node id: 1, host: nvc1
-    vm id: 2, name: demo1, vnc: 5901, cpu: 2%
-    vm id: 52, name: efw, vnc: 5903, cpu: 0%
-  node id: 2, host: nvc2
-    vm id: 4, name: nserv1, vnc: 5902, cpu: 11%
+      ID  Host                     Status  
+      --  ----                     ------  
+       1  nvc1                     joined  
+       2  nvc2                     missing 
+
+      ID  Name                     Host                       VNC#     CPU%
+      --  ----                     ----                       ----     ----
+       2  demo1                    nvc1                       5901        1
+      51  nserv1                   nvc1                       5902        0
+      52  efw                      nvc1                       5903        4
 
