@@ -45,7 +45,7 @@ typedef struct _domain_info_t {
 typedef LIST_HEAD(_domain_info_head_t, _domain_info_t) domain_info_head_t;
 
 
-int     domain_status_update(domain_info_head_t *);
+int     domain_status_update(char *, domain_info_head_t *);
 
 size_t  domain_status_to_msg(domain_info_head_t *, char *, size_t);
 size_t  domain_status_from_msg(domain_info_head_t *, char *, size_t);

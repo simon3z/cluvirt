@@ -21,9 +21,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <fcntl.h>
 #include <time.h>
+#include <getopt.h>
 #include <errno.h>
 #include <error.h>
+
 
 #include "status.h"
 #include "cluster.h"
@@ -31,10 +34,15 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 
 #define MESSAGE_BUFFER_SIZE     1024
+#define LIBVIRT_DEFAULT_URI     "qemu:///system"
+#define DEVNULL_PATH            "/dev/null"
 
 
-cpg_handle_t        daemon_handle;
-domain_info_head_t  di_head = LIST_HEAD_INITIALIZER();
+static cpg_handle_t        daemon_handle;
+static domain_info_head_t  di_head = LIST_HEAD_INITIALIZER();
+
+static int daemon_flag;
+static char *libvirt_uri = LIBVIRT_DEFAULT_URI;
 
 
 void cpg_deliver(cpg_handle_t handle,
@@ -67,13 +75,77 @@ static cpg_callbacks_t cpg_callbacks = {
     .cpg_deliver_fn = cpg_deliver, .cpg_confchg_fn = cpg_confchg
 };
 
+void fork_daemon(void)
+{
+    pid_t pid, sid, devnull;
 
-void main_loop()
+    pid = fork();
+    
+    if (pid < 0) {
+        log_error("unable to fork the daemon: %i", errno);
+        exit(EXIT_FAILURE);
+    }
+
+    if (pid > 0) {
+        exit(EXIT_SUCCESS);
+    }
+
+    umask(0);
+
+    if ((sid = setsid()) < 0) {
+        log_error("unable to create a new session: %i", errno);
+        exit(EXIT_FAILURE);
+    }
+
+    if ((chdir("/")) < 0) {
+        log_error("unable to change working directory: %i", errno);
+        exit(EXIT_FAILURE);
+    }
+
+    if ((devnull = open(DEVNULL_PATH, O_RDWR)) < 0) {
+        log_error("unable to open %s: %i", DEVNULL_PATH, errno);
+    }
+    
+    dup2(devnull, 0);
+    dup2(devnull, 1);
+    dup2(devnull, 2);
+}
+
+void cmdline_options(char argc, char *argv[])
+{
+    int option_index = 0, c;
+
+    daemon_flag = 0x01;
+
+    while (1) {    
+        c = getopt_long(argc, argv, "fu:", 0, &option_index);
+    
+        if (c == -1)
+            break;
+
+        switch (c)
+        {
+            case 'f':
+                daemon_flag = 0x00;
+                break;
+
+            case 'u':
+                libvirt_uri = optarg;
+                break;
+        }
+    }
+    
+    log_debug("daemon_flag: 0x%02x", daemon_flag);
+    log_debug("libvirt_uri: %s", libvirt_uri);
+}
+
+
+void main_loop(void)
 {
     int             fd_csync, fd_max;
     fd_set          readfds;
     struct timeval  select_timeout;
- 
+    
     if ((fd_csync = setup_cpg(&daemon_handle, &cpg_callbacks)) < 0) {
         log_error("unable to initialize openais: %i", errno);
         exit(EXIT_FAILURE);
@@ -90,7 +162,7 @@ void main_loop()
         
         select(fd_max, &readfds, 0, 0, &select_timeout);
 
-        domain_status_update(&di_head);
+        domain_status_update(libvirt_uri, &di_head);
         
         if (FD_ISSET(fd_csync, &readfds)) {
             if (cpg_dispatch(daemon_handle, CPG_DISPATCH_ALL) != CPG_OK) {
@@ -102,6 +174,12 @@ void main_loop()
 
 int main(int argc, char *argv[])
 {
+    cmdline_options(argc, argv);
+
+    if (daemon_flag) {
+        fork_daemon();
+    }
+    
     main_loop();
 
     return EXIT_SUCCESS; 

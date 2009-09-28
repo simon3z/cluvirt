@@ -34,7 +34,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "utils.h"
 
 
-#define LIBVIRT_URI             "qemu:///system"
 #define XPATH_VNC_PORT          \
     "string(/domain/devices/graphics[@type='vnc']/@port)"
 
@@ -44,14 +43,14 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 static int _libvirt_vncport(virDomain *);
 
 
-int domain_status_update(domain_info_head_t *di_head)
+int domain_status_update(char *uri, domain_info_head_t *di_head)
 {
     virConnect      *lvh;
     int             id[LIBVIRT_ID_BUFFER_SIZE], n, i;
     time_t          updtime;    
     domain_info_t   *d, *j;
     
-    if ((lvh = virConnectOpen(LIBVIRT_URI)) == 0) {
+    if ((lvh = virConnectOpen(uri)) == 0) {
         log_error("unable to connect to libvirtd: %i", errno);
         return -1;
     }
