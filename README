@@ -10,9 +10,8 @@ Build Requirements
 ==================
 The build has been tested on CentOS 5.3 with:
 
-  openais-0.80
   openais-devel-0.80
-  libvirt-0.6.4 (built from fedora sources)
+  cman-devel-2.0.98
   libvirt-devel-0.6.4 (built from fedora sources)
 
 The sources should compile with previous libvirt versions down to 0.3.x.
