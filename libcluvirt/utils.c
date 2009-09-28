@@ -17,23 +17,5 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#ifndef __UTILS_H_
-#define __UTILS_H_
+int utils_debug = 0;
 
-#include <syslog.h>
-
-extern int utils_debug;
-
-#define log_debug(x, t...) \
-if (utils_debug) { \
-    printf("DEBUG(%s:%i|%s): " x "\n", __FILE__, __LINE__, __FUNCTION__, t); \
-}
-
-#define log_error(fmt, args...) \
-do { \
-    log_debug(fmt, ##args); \
-    syslog(LOG_ERR, fmt, ##args); \
-} while (0)
-
-
-#endif

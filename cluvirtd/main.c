@@ -37,11 +37,15 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define LIBVIRT_DEFAULT_URI     "qemu:///system"
 #define DEVNULL_PATH            "/dev/null"
 
+#define CMDLINE_OPT_HELP        0x0001
+#define CMDLINE_OPT_DEBUG       0x0002
+#define CMDLINE_OPT_DAEMON      0x0004
+
 
 static cpg_handle_t        daemon_handle;
 static domain_info_head_t  di_head = LIST_HEAD_INITIALIZER();
 
-static int daemon_flag;
+static int cmdline_flags;
 static char *libvirt_uri = LIBVIRT_DEFAULT_URI;
 
 
@@ -69,11 +73,6 @@ void cpg_confchg(cpg_handle_t handle,
 {
     return;
 }
-
-
-static cpg_callbacks_t cpg_callbacks = {
-    .cpg_deliver_fn = cpg_deliver, .cpg_confchg_fn = cpg_confchg
-};
 
 void fork_daemon(void)
 {
@@ -111,33 +110,61 @@ void fork_daemon(void)
     dup2(devnull, 2);
 }
 
+void print_usage(char *binpath)
+{
+    printf("Usage: %s [OPTIONS]\n", binpath);
+    printf("Virtual machines supervisor for openais cluster and libvirt.\n\n");
+    printf("  -h, --help                 display this help and exit\n");
+    printf("  -u, --uri=URI              libvirt connection URI\n");
+    printf("  -f                         no daemon, run in foreground\n");
+    printf("  -D                         debug output enabled\n");
+}
+
 void cmdline_options(char argc, char *argv[])
 {
-    int option_index = 0, c;
+    int c, option_index = 0;
+    static struct option long_options[] = {
+        {"help",    no_argument,        0, 'h'},
+        {"uri",     required_argument,  0, 'u'},
+        {0, 0, 0, 0}
+    };
 
-    daemon_flag = 0x01;
+    cmdline_flags = CMDLINE_OPT_DAEMON;
 
     while (1) {    
-        c = getopt_long(argc, argv, "fu:", 0, &option_index);
+        c = getopt_long(argc, argv, "hfDu:", long_options, &option_index);
     
         if (c == -1)
             break;
 
         switch (c)
         {
+            case 'h':
+                cmdline_flags |= CMDLINE_OPT_HELP;
+
             case 'f':
-                daemon_flag = 0x00;
+                cmdline_flags &= ~CMDLINE_OPT_DAEMON;
+                break;
+            
+            case 'D':
+                cmdline_flags |= CMDLINE_OPT_DEBUG;
                 break;
 
             case 'u':
-                libvirt_uri = optarg;
+                libvirt_uri = strdup(optarg);
                 break;
         }
     }
     
-    log_debug("daemon_flag: 0x%02x", daemon_flag);
+    log_debug("cmdline_flags: 0x%02x", cmdline_flags);
     log_debug("libvirt_uri: %s", libvirt_uri);
+
 }
+
+
+static cpg_callbacks_t cpg_callbacks = {
+    .cpg_deliver_fn = cpg_deliver, .cpg_confchg_fn = cpg_confchg
+};
 
 
 void main_loop(void)
@@ -166,7 +193,7 @@ void main_loop(void)
         
         if (FD_ISSET(fd_csync, &readfds)) {
             if (cpg_dispatch(daemon_handle, CPG_DISPATCH_ALL) != CPG_OK) {
-                error(1, errno, "Unable to dispatch");
+                error(1, errno, "unable to dispatch");
             }
         }
     }
@@ -176,8 +203,17 @@ int main(int argc, char *argv[])
 {
     cmdline_options(argc, argv);
 
-    if (daemon_flag) {
+    if (cmdline_flags & CMDLINE_OPT_HELP) {
+        print_usage(argv[0]);
+        exit(EXIT_SUCCESS);
+    }
+
+    if (cmdline_flags & CMDLINE_OPT_DAEMON) {
         fork_daemon();
+    }
+    
+    if (cmdline_flags & CMDLINE_OPT_DEBUG) {
+        utils_debug = 0x01;
     }
     
     main_loop();
