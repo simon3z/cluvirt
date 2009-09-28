@@ -20,7 +20,15 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #ifndef __CLUSTER_H_
 #define __CLUSTER_H_
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
+#ifdef HAVE_COROSYNC_CPG_H
+#include <corosync/cpg.h>
+#else
 #include <openais/cpg.h>
+#endif
 
 
 #define CLUVIRT_GROUP_NAME      "cluvirtd"
