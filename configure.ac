@@ -61,7 +61,7 @@ AC_CONFIG_FILES([Makefile
                  libcluvirt/Makefile 
                  cluvirtd/Makefile
                  cluvirtadm/Makefile
-                 cluvirtd.spec
+                 cluvirt.spec
                  cluvirtd.init
 ])
 
