@@ -39,7 +39,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 static cluster_node_head_t  cn_head = STAILQ_HEAD_INITIALIZER(cn_head);
 
 static int cmdline_flags;
-static int group_members = 0, group_answers = 0; /* FIXME: something smarter */
+static int group_members = -1, group_answers = 0; /* FIXME: something smarter */
 
 
 void cpg_deliver(cpg_handle_t handle,
@@ -79,8 +79,8 @@ void cpg_confchg(cpg_handle_t handle,
         struct cpg_address *left_list, int left_list_entries,
         struct cpg_address *joined_list, int joined_list_entries)
 {
-    if (group_members == 0) {
-        group_members = member_list_entries - 1;
+    if ((group_members < 0) || (group_members >= member_list_entries)) {
+        group_members = member_list_entries - 1; /* FIXME: something smarter */
     }
 }
 
