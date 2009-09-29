@@ -21,6 +21,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define __STATUS_H_
 
 #include <stdint.h>
+#include <sys/time.h>
 #include <sys/queue.h>
 
 
@@ -35,8 +36,8 @@ typedef struct _domain_status_t {
 
 typedef struct _domain_info_t {
     uint32_t                        id;
-    uint32_t                        update;
     char                            *name;
+    struct timeval                  update;
     domain_status_t                 status;
     LIST_ENTRY(_domain_info_t)      next;
 } domain_info_t;

@@ -45,10 +45,10 @@ static int _libvirt_vncport(virDomain *);
 
 int domain_status_update(char *uri, domain_info_head_t *di_head)
 {
-    virConnect      *lvh;
     int             id[LIBVIRT_ID_BUFFER_SIZE], n, i;
-    time_t          updtime;    
+    virConnect      *lvh;
     domain_info_t   *d, *j;
+    struct timeval  time_now;
     
     if ((lvh = virConnectOpen(uri)) == 0) {
         log_error("unable to connect to libvirtd: %i", errno);
@@ -70,11 +70,15 @@ int domain_status_update(char *uri, domain_info_head_t *di_head)
         goto clean_exit1;
     }
     
-    time(&updtime);
+    if (gettimeofday(&time_now, 0) < 0) {
+        log_error("unable to get time of day: %i", errno);
+        goto clean_exit1;
+    }
     
     for (i = 0; i < n; i++) {
-        virDomain       *lv_domain;
-        virDomainInfo   lv_info;
+        virDomain           *lv_domain;
+        virDomainInfo       lv_info;
+        unsigned long long  time_delta;
         
         if ((lv_domain = virDomainLookupByID(lvh, id[i])) == 0) {
             log_error("unable to lookup domain %i", id[i]);
@@ -116,19 +120,23 @@ int domain_status_update(char *uri, domain_info_head_t *di_head)
             /* initializing cpu load parameters */
             d->status.usage     = 0;
             d->status.cputime   = lv_info.cpuTime;
-            d->update           = updtime;
+            d->update.tv_sec    = time_now.tv_sec;
+            d->update.tv_usec   = time_now.tv_usec;
         }
 
         /* these values will be updated at each call */
-        d->status.state     = lv_info.state;
+        d->status.state         = lv_info.state;
         
-        if ((updtime - d->update) > 0) { /* avoiding divide by-zero */
-            d->status.usage     = 
-                    (lv_info.cpuTime - d->status.cputime) /
-                    ((updtime - d->update) * 10000000ull);
+        time_delta = ((time_now.tv_sec - d->update.tv_sec) * 1000000ull) +
+                        (time_now.tv_usec - d->update.tv_usec);
+        
+        if (time_delta > 1000000ull) { /* > 0 to avoid divide-by-zero */
+            d->status.usage     =
+                    (lv_info.cpuTime - d->status.cputime) / (time_delta * 10);
 
             d->status.cputime   = lv_info.cpuTime;
-            d->update           = updtime;
+            d->update.tv_sec    = time_now.tv_sec;
+            d->update.tv_usec   = time_now.tv_usec;
         }
 
 clean_loop1:
@@ -211,6 +219,8 @@ size_t domain_status_to_msg(
     size_t          p_offset = 0;
     domain_info_t   *d;
     
+    /* FIXME: endianness */
+    
     LIST_FOREACH(d, di_head, next) {
         size_t      name_len;
         size_t      n_offset;
@@ -240,7 +250,9 @@ size_t domain_status_from_msg(
     size_t          p_offset = 0;
     domain_info_t   *d;
     
-    while (p_offset + sizeof(domain_info_t) < msg_size) {
+    /* FIXME: endianness */
+    
+    while (p_offset + sizeof(domain_info_t) < msg_size) { 
         d = malloc(sizeof(domain_info_t));
         
         memcpy(d, msg + p_offset, sizeof(domain_info_t));
