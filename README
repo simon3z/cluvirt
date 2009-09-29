@@ -25,11 +25,17 @@ Building from the repository (requires autoreconf):
   $ ./configure
   $ make
 
+Install Instructions
+====================
+
+  # make install
+
 Basic Usage
 ===========
 
-The daemon requires openais and libvirtd up and running. It has been tested on
-CentOS 5.3 with openais-0.80.3-22 and libvirt-0.6.4 (built from fedora sources).
+The cluvirtd daemon requires openais/corosync and libvirtd up and running.
+It has been tested on CentOS 5.3 with openais-0.80.3-22, libvirt-0.6.4
+and qemu-kvm virtual machines.
 
 Run cluvirtd on each cluster node:
 
@@ -37,12 +43,6 @@ Run cluvirtd on each cluster node:
 
 Fetch the current status using cluvirtadm:
 
-  # cluvirtadm
-
-Usage Example
-=============
-
-  # cluvirtd
   # cluvirtadm
       ID  Host                     Status  
       --  ----                     ------  

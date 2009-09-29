@@ -22,8 +22,10 @@
 # Source function library.
 . /etc/rc.d/init.d/functions
 
-exec="/usr/sbin/cluvirtd"
+exec="@sbindir@/cluvirtd"
 prog=$(basename $exec)
+
+LIBVIRT_URI="qemu:///system"
 
 [ -e /etc/sysconfig/$prog ] && . /etc/sysconfig/$prog
 
@@ -31,7 +33,7 @@ lockfile=/var/lock/subsys/$prog
 
 start() {
     echo -n $"Starting $prog: "
-    daemon $exec
+    daemon $exec --uri="$LIBVIRT_URI"
     retval=$?
     echo
     [ $retval -eq 0 ] && touch $lockfile

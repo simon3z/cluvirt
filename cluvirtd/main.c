@@ -27,7 +27,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <errno.h>
 #include <error.h>
 
-
 #include "status.h"
 #include "cluster.h"
 #include "utils.h"
@@ -37,9 +36,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define LIBVIRT_DEFAULT_URI     "qemu:///system"
 #define DEVNULL_PATH            "/dev/null"
 
+#define PROGRAM_NAME            "cluvirtd"
 #define CMDLINE_OPT_HELP        0x0001
-#define CMDLINE_OPT_DEBUG       0x0002
-#define CMDLINE_OPT_DAEMON      0x0004
+#define CMDLINE_OPT_VERSION     0x0002
+#define CMDLINE_OPT_DEBUG       0x0004
+#define CMDLINE_OPT_DAEMON      0x0008
 
 
 static domain_info_head_t  di_head = LIST_HEAD_INITIALIZER();
@@ -109,14 +110,29 @@ void fork_daemon(void)
     dup2(devnull, 2);
 }
 
-void print_usage(char *binpath)
+void print_version()
 {
-    printf("Usage: %s [OPTIONS]\n", binpath);
+    printf("%s %s\n", PROGRAM_NAME, PACKAGE_VERSION);
+    printf("Copyright (C) 2009 Nethesis, Srl.\n");
+    printf("This is free software.  " \
+           "You may redistribute copies of it under the terms of\n");
+    printf("the GNU General Public License "\
+           "<http://www.gnu.org/licenses/gpl.html>.\n");
+    printf("There is NO WARRANTY, to the extent permitted by law.\n\n");
+    printf("Written by Federico Simoncelli.\n");
+}
+
+void print_usage()
+{
+    printf("Usage: %s [OPTIONS]\n", PROGRAM_NAME);
     printf("Virtual machines supervisor for openais cluster and libvirt.\n\n");
     printf("  -h, --help                 display this help and exit\n");
+    printf("  -v, --version              " \
+           "display version information and exit\n");
     printf("  -u, --uri=URI              libvirt connection URI\n");
     printf("  -f                         no daemon, run in foreground\n");
     printf("  -D                         debug output enabled\n");
+    printf("\nReport bugs to <%s>.\n", PACKAGE_BUGREPORT);
 }
 
 void cmdline_options(char argc, char *argv[])
@@ -124,6 +140,7 @@ void cmdline_options(char argc, char *argv[])
     int c, option_index = 0;
     static struct option long_options[] = {
         {"help",    no_argument,        0, 'h'},
+        {"version", no_argument,        0, 'v'},
         {"uri",     required_argument,  0, 'u'},
         {0, 0, 0, 0}
     };
@@ -131,7 +148,7 @@ void cmdline_options(char argc, char *argv[])
     cmdline_flags = CMDLINE_OPT_DAEMON;
 
     while (1) {    
-        c = getopt_long(argc, argv, "hfDu:", long_options, &option_index);
+        c = getopt_long(argc, argv, "hvfDu:", long_options, &option_index);
     
         if (c == -1)
             break;
@@ -140,6 +157,11 @@ void cmdline_options(char argc, char *argv[])
         {
             case 'h':
                 cmdline_flags |= CMDLINE_OPT_HELP;
+                break;
+            
+            case 'v':
+                cmdline_flags |= CMDLINE_OPT_VERSION;
+                break;
 
             case 'f':
                 cmdline_flags &= ~CMDLINE_OPT_DAEMON;
@@ -157,7 +179,6 @@ void cmdline_options(char argc, char *argv[])
     
     log_debug("cmdline_flags: 0x%04x", cmdline_flags);
     log_debug("libvirt_uri: %s", libvirt_uri);
-
 }
 
 
@@ -201,7 +222,12 @@ int main(int argc, char *argv[])
     cmdline_options(argc, argv);
 
     if (cmdline_flags & CMDLINE_OPT_HELP) {
-        print_usage(argv[0]);
+        print_usage();
+        exit(EXIT_SUCCESS);
+    }
+    
+    if (cmdline_flags & CMDLINE_OPT_VERSION) {
+        print_version();
         exit(EXIT_SUCCESS);
     }
 

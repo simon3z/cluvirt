@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT([cluvirt], [master], [federico.simoncelli@nethesis.it])
+AC_INIT([cluvirt], [0.0.90], [federico.simoncelli@nethesis.it])
 AM_INIT_AUTOMAKE()
 AC_CONFIG_SRCDIR([cluvirtd/main.c], [cluvadm/main.c])
 AC_CONFIG_HEADER([config.h])
@@ -61,6 +61,7 @@ AC_CONFIG_FILES([Makefile
                  libcluvirt/Makefile 
                  cluvirtd/Makefile
                  cluvirtadm/Makefile
+                 man/Makefile
                  cluvirt.spec
                  cluvirtd.init
 ])

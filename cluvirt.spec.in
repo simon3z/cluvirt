@@ -11,6 +11,7 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 BuildRequires:  openais-devel >= 0.80, cman-devel >= 2.0.98
 BuildRequires:  libvirt-devel >= 0.3.3
+BuildRequires:  help2man
 
 %description
 Virtual machines supervisor for openais cluster.
@@ -35,12 +36,25 @@ install -D -m 755 cluvirtd.init $RPM_BUILD_ROOT/%{_initrddir}/cluvirtd
 rm -rf $RPM_BUILD_ROOT
 
 
+%post
+/sbin/chkconfig --add cluvirtd
+
+
+%preun
+if [ $1 = 0 ]; then
+    /sbin/service cluvirtd stop > /dev/null 2>&1
+    /sbin/chkconfig --del cluvirtd
+fi
+
+
 %files
 %defattr(-,root,root,-)
 %doc AUTHORS ChangeLog COPYING NEWS  README
 %{_sbindir}/cluvirtd
 %{_bindir}/cluvirtadm
-%{_initrddir}/cluvirtd
+%{_sysconfdir}/rc.d/init.d/cluvirtd
+%{_mandir}/man8/cluvirtd.8.gz
+%{_mandir}/man8/cluvirtadm.8.gz
 
 
 %changelog

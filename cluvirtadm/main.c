@@ -32,8 +32,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "utils.h"
 
 
+#define PROGRAM_NAME            "cluvirtadm"
 #define CMDLINE_OPT_HELP        0x0001
-#define CMDLINE_OPT_DEBUG       0x0002
+#define CMDLINE_OPT_VERSION     0x0002
+#define CMDLINE_OPT_DEBUG       0x0004
 
 
 static cluster_node_head_t  cn_head = STAILQ_HEAD_INITIALIZER(cn_head);
@@ -90,12 +92,25 @@ void request_domain_info()
     send_message(request_msg, sizeof(request_msg));
 }
 
+void print_version()
+{
+    printf("%s %s\n", PROGRAM_NAME, PACKAGE_VERSION);
+    printf("Copyright (C) 2009 Nethesis, Srl.\n");
+    printf("This is free software.  " \
+           "You may redistribute copies of it under the terms of\n");
+    printf("the GNU General Public License "\
+           "<http://www.gnu.org/licenses/gpl.html>.\n");
+    printf("There is NO WARRANTY, to the extent permitted by law.\n\n");
+    printf("Written by Federico Simoncelli.\n");
+}
 
 void print_usage(char *binpath)
 {
     printf("Usage: %s [OPTIONS]\n", binpath);
     printf("Virtual machines supervisor for openais cluster and libvirt.\n\n");
     printf("  -h, --help                 display this help and exit\n");
+    printf("  -v, --version              " \
+           "display version information and exit\n");
     printf("  -D                         debug output enabled\n");
 }
 
@@ -104,13 +119,14 @@ void cmdline_options(char argc, char *argv[])
     int c, option_index = 0;
     static struct option long_options[] = {
         {"help",    no_argument,        0, 'h'},
+        {"version", no_argument,        0, 'v'},
         {0, 0, 0, 0}
     };
 
     cmdline_flags = 0x00;
 
     while (1) {    
-        c = getopt_long(argc, argv, "hD", long_options, &option_index);
+        c = getopt_long(argc, argv, "hvD", long_options, &option_index);
     
         if (c == -1)
             break;
@@ -119,6 +135,11 @@ void cmdline_options(char argc, char *argv[])
         {
             case 'h':
                 cmdline_flags |= CMDLINE_OPT_HELP;
+                break;
+            
+            case 'v':
+                cmdline_flags |= CMDLINE_OPT_VERSION;
+                break;
 
             case 'D':
                 cmdline_flags |= CMDLINE_OPT_DEBUG;
@@ -207,6 +228,11 @@ int main(int argc, char *argv[])
 
     if (cmdline_flags & CMDLINE_OPT_HELP) {
         print_usage(argv[0]);
+        exit(EXIT_SUCCESS);
+    }
+    
+    if (cmdline_flags & CMDLINE_OPT_VERSION) {
+        print_version();
         exit(EXIT_SUCCESS);
     }
     
