@@ -39,9 +39,9 @@ PKG_CHECK_MODULES([virt], [libvirt])
 # Checks for header files.
 AC_HEADER_STDC
 AC_CHECK_HEADERS([stdlib.h string.h syslog.h unistd.h])
-AC_CHECK_HEADERS([openais/cpg.h],,
-    [AC_MSG_ERROR([openais/cpg.h header is missing])]
-)
+AC_CHECK_HEADERS([corosync/cpg.h],,
+    [AC_CHECK_HEADERS([openais/cpg.h],,
+        [AC_MSG_ERROR([cpg.h header is missing])])])
 AC_CHECK_HEADERS([libcman.h],,
     [AC_MSG_ERROR([libcman.h header is missing])]
 )
