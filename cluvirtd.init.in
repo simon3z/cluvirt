@@ -1,0 +1,77 @@
+#!/bin/sh
+#
+# cluvirtd - Virtual machines supervisor for openais cluster and libvirt.
+#
+# chkconfig:   - 99 02
+# description: Virtual machines supervisor for openais cluster and libvirt.
+#              
+
+# http://fedoraproject.org/wiki/FCNewInit/Initscripts
+### BEGIN INIT INFO
+# Provides: 
+# Required-Start: 
+# Required-Stop: 
+# Should-Start: 
+# Should-Stop: 
+# Default-Start: 
+# Default-Stop: 
+# Short-Description: 
+# Description: 
+### END INIT INFO
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+exec="/usr/sbin/cluvirtd"
+prog=$(basename $exec)
+
+[ -e /etc/sysconfig/$prog ] && . /etc/sysconfig/$prog
+
+lockfile=/var/lock/subsys/$prog
+
+start() {
+    echo -n $"Starting $prog: "
+    daemon $exec
+    retval=$?
+    echo
+    [ $retval -eq 0 ] && touch $lockfile
+    return $retval
+}
+
+stop() {
+    echo -n $"Stopping $prog: "
+    killproc $prog
+    retval=$?
+    echo
+    [ $retval -eq 0 ] && rm -f $lockfile
+    return $retval
+}
+
+restart() {
+    stop
+    start
+}
+
+case "$1" in
+    start|stop|restart)
+        $1
+        ;;
+    force-reload)
+        restart
+        ;;
+    status)
+        status $prog
+        ;;
+    try-restart|condrestart)
+        if status $prog >/dev/null ; then
+            restart
+        fi
+	;;
+    reload)
+        action $"Service ${0##*/} does not support the reload action: " /bin/false
+        exit 3
+        ;;
+    *)
+        echo $"Usage: $0 {start|stop|status|restart|try-restart|force-reload}"
+        exit 2
+esac

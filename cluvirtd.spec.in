@@ -1,0 +1,47 @@
+Name:           cluvirt
+Version:        @VERSION@
+Release:        1%{?dist}
+Summary:        Virtual machines supervisor for openais cluster.
+
+Group:          System Environment/Daemons
+License:        GPL
+URL:            http://www.nethesis.it
+Source0:        %{name}-%{version}.tar.gz
+BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
+
+BuildRequires:  openais-devel >= 0.80, cman-devel >= 2.0.98
+BuildRequires:  libvirt-devel >= 0.3.3
+
+%description
+Virtual machines supervisor for openais cluster.
+
+
+%prep
+%setup -q
+
+
+%build
+%configure
+make %{?_smp_mflags}
+
+
+%install
+rm -rf $RPM_BUILD_ROOT
+make install DESTDIR=$RPM_BUILD_ROOT
+install -D -m 755 cluvirtd.init $RPM_BUILD_ROOT/%{_initrddir}/cluvirtd
+
+
+%clean
+rm -rf $RPM_BUILD_ROOT
+
+
+%files
+%defattr(-,root,root,-)
+%doc AUTHORS ChangeLog COPYING NEWS  README
+%{_sbindir}/cluvirtd
+%{_bindir}/cluvirtadm
+%{_initrddir}/cluvirtd
+
+
+%changelog
+
