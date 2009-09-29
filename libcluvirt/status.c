@@ -131,8 +131,8 @@ int domain_status_update(char *uri, domain_info_head_t *di_head)
                         (time_now.tv_usec - d->update.tv_usec);
         
         if (time_delta > 1000000ull) { /* > 0 to avoid divide-by-zero */
-            d->status.usage     =
-                    (lv_info.cpuTime - d->status.cputime) / (time_delta * 10);
+            d->status.usage     = ((lv_info.cpuTime - d->status.cputime) /
+                                    lv_info.nrVirtCpu) / (time_delta * 10);
 
             d->status.cputime   = lv_info.cpuTime;
             d->update.tv_sec    = time_now.tv_sec;
