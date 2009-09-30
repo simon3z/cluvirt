@@ -28,8 +28,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <libxml/parser.h>
 #include <libxml/xpath.h>
 
-#include <libvirt/libvirt.h>
-
 #include "status.h"
 #include "utils.h"
 
@@ -115,12 +113,17 @@ int domain_status_update(char *uri, domain_info_head_t *di_head)
             d->name             = (vm_name == 0) ? 
                                     strdup("(unknown)") : strdup(vm_name);
 
+            if (virDomainGetUUID(lv_domain, d->uuid) < 0) {
+                memset(d->uuid, 0, VIR_UUID_BUFLEN);
+                log_error("unable to get domain uuid %i", id[i]);
+            }
+
             d->status.memory    = lv_info.memory;
             d->status.ncpu      = lv_info.nrVirtCpu;
             d->status.vncport   = _libvirt_vncport(lv_domain);
             
             /* initializing cpu load parameters */
-            d->status.usage     = 0;
+            d->status.usage     = -1;
             d->status.cputime   = lv_info.cpuTime;
             d->update.tv_sec    = time_now.tv_sec;
             d->update.tv_usec   = time_now.tv_usec;
@@ -132,7 +135,8 @@ int domain_status_update(char *uri, domain_info_head_t *di_head)
         time_delta = ((time_now.tv_sec - d->update.tv_sec) * 1000000ull) +
                         (time_now.tv_usec - d->update.tv_usec);
         
-        if (time_delta > 1000000ull) { /* > 0 to avoid divide-by-zero */
+        /* update cpu utilization every 10 seconds */
+        if (time_delta > (10 * 1000000ull)) { /* > 0 to avoid divide-by-zero */
             d->status.usage     = ((lv_info.cpuTime - d->status.cputime) /
                                     lv_info.nrVirtCpu) / (time_delta * 10);
 

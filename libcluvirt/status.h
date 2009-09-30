@@ -21,13 +21,16 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define __STATUS_H_
 
 #include <stdint.h>
+
 #include <sys/time.h>
 #include <sys/queue.h>
+
+#include <libvirt/libvirt.h>
 
 
 typedef struct _domain_status_t {
     uint8_t                         state;
-    uint32_t                        usage;
+    int8_t                          usage;
     uint32_t                        memory;
     uint16_t                        ncpu;
     uint16_t                        vncport;
@@ -37,6 +40,7 @@ typedef struct _domain_status_t {
 typedef struct _domain_info_t {
     uint32_t                        id;
     char                            *name;
+    unsigned char                   uuid[VIR_UUID_BUFLEN];
     struct timeval                  update;
     domain_status_t                 status;
     LIST_ENTRY(_domain_info_t)      next;

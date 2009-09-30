@@ -46,12 +46,14 @@ Fetch the current status using cluvirtadm:
   # cluvirtadm
       ID  Host                     Status  
       --  ----                     ------  
-       1  nvc1                     joined  
-       2  nvc2                     missing 
-
-      ID  Name                     Host                       VNC#     CPU%
-      --  ----                     ----                       ----     ----
-       2  demo1                    nvc1                       5901        1
-      51  nserv1                   nvc1                       5902        0
-      52  efw                      nvc1                       5903        4
+       1  nvc1                     online, local, cluvirtd
+       2  nvc2                     online, cluvirtd
+  
+      ID  Name                 Host                      State   VNC#     CPU%
+      --  ----                 ----                      -----   ----     ----
+       2  demo1                nvc1                        R     5901        1
+       3  nserv1               nvc1                        R     5900        5
+      52  efw                  nvc1                        R     5903        0
+      84  nserv2               nvc2                        P     5902        0
+      89  rh5buildsys1         nvc2                        R     5900        0
 

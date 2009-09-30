@@ -166,38 +166,44 @@ void print_status()
             'C'     /* VIR_DOMAIN_CRASHED	= 	6 */
     };
 
-    printf("%6.6s  %-24.24s %-8.8s\n", "ID", "Host", "Status");
-    printf("%6.6s  %-24.24s %-8.8s\n", "--", "----", "------");
+    printf("%4.4s  %-24.24s %-8.8s\n", "ID", "Member Name", "Status");
+    printf("%4.4s  %-24.24s %-8.8s\n", "--", "-----------", "------");
         
     STAILQ_FOREACH(n, &cn_head, next) {
-        printf("%6.0i  %-24.24s ", n->id, n->host);
-        
-        printf((n->status & CLUSTER_NODE_ONLINE) ? "online" : "offline");
+        printf("%4i  %-24.24s %s", n->id, n->host,
+            (n->status & CLUSTER_NODE_ONLINE) ? "online" : "offline");
         
         if (n->status & CLUSTER_NODE_LOCAL) {
-            printf(", local");
+            printf(", %s", "local");
         }
         
         if (n->status & CLUSTER_NODE_JOINED) {
-            printf(", cluvirtd");
+            printf(", %s", "cluvirtd");
         }
         
         printf("\n");
     }
     
     printf("\n");
-    printf("%6.6s  %-20.20s %-24.24s %6.6s %6.6s %8.8s\n",
-                    "ID", "Name", "Host", "State", "VNC#", "CPU%");
-    printf("%6.6s  %-20.20s %-24.24s %6.6s %6.6s %8.8s\n",
-                    "--", "----", "----", "-----", "----", "----");
+    printf("%4.4s  %-20.20s %-24.24s %6.6s %6.6s %8.8s\n",
+                    "ID", "VM Name", "Host", "State", "VNC#", "CPU%");
+    printf("%4.4s  %-20.20s %-24.24s %6.6s %6.6s %8.8s\n",
+                    "--", "-------", "----", "-----", "----", "----");
 
     STAILQ_FOREACH(n, &cn_head, next) {
         LIST_FOREACH(d, &n->domain, next) {
             vm_state = (d->status.state < sizeof(state_name)) ?
                         state_name[d->status.state] : state_name[0];
-            printf("%6i  %-20.20s %-24.24s    %-3.3c %6i %8i\n",
-                d->id, d->name, n->host, vm_state, d->status.vncport,
-                d->status.usage);
+
+            printf("%4i  %-20.20s %-24.24s    %-3.3c %6i",
+                d->id, d->name, n->host, vm_state, d->status.vncport);
+            
+            if (d->status.usage < 0) {      /* cpu usage not available */
+                printf(" %8.8s\n", "na");
+            }
+            else {
+                printf(" %8i\n", d->status.usage);
+            }
         }
     }
 }
