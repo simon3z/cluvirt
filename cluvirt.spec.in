@@ -21,6 +21,7 @@ Virtual machines supervisor for openais cluster.
 
 
 %build
+[ ! -f ./configure ] && ./autogen.sh
 %configure
 make %{?_smp_mflags}
 
