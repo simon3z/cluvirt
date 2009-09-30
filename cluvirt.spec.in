@@ -11,7 +11,6 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 BuildRequires:  openais-devel >= 0.80, cman-devel >= 2.0.98
 BuildRequires:  libvirt-devel >= 0.3.3
-BuildRequires:  help2man
 
 %description
 Virtual machines supervisor for openais cluster.

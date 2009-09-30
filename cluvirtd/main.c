@@ -33,7 +33,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 
 #define MESSAGE_BUFFER_SIZE     1024
-#define LIBVIRT_DEFAULT_URI     "qemu:///system"
 #define DEVNULL_PATH            "/dev/null"
 
 #define PROGRAM_NAME            "cluvirtd"
@@ -46,7 +45,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 static domain_info_head_t  di_head = LIST_HEAD_INITIALIZER();
 
 static int cmdline_flags;
-static char *libvirt_uri = LIBVIRT_DEFAULT_URI;
+static char *libvirt_uri = 0;
 
 
 void cpg_deliver(cpg_handle_t handle,
@@ -127,7 +126,7 @@ void print_usage()
     printf("Usage: %s [OPTIONS]\n", PROGRAM_NAME);
     printf("Virtual machines supervisor for openais cluster and libvirt.\n\n");
     printf("  -h, --help                 display this help and exit\n");
-    printf("  -v, --version              " \
+    printf("      --version              " \
            "display version information and exit\n");
     printf("  -u, --uri=URI              libvirt connection URI\n");
     printf("  -f                         no daemon, run in foreground\n");
@@ -140,7 +139,7 @@ void cmdline_options(char argc, char *argv[])
     int c, option_index = 0;
     static struct option long_options[] = {
         {"help",    no_argument,        0, 'h'},
-        {"version", no_argument,        0, 'v'},
+        {"version", no_argument,        0, 0},
         {"uri",     required_argument,  0, 'u'},
         {0, 0, 0, 0}
     };
@@ -148,21 +147,21 @@ void cmdline_options(char argc, char *argv[])
     cmdline_flags = CMDLINE_OPT_DAEMON;
 
     while (1) {    
-        c = getopt_long(argc, argv, "hvfDu:", long_options, &option_index);
+        c = getopt_long(argc, argv, "hfDu:", long_options, &option_index);
     
         if (c == -1)
             break;
 
         switch (c)
         {
+            case 0: /* version */
+                cmdline_flags |= CMDLINE_OPT_VERSION;
+                break;
+                
             case 'h':
                 cmdline_flags |= CMDLINE_OPT_HELP;
                 break;
             
-            case 'v':
-                cmdline_flags |= CMDLINE_OPT_VERSION;
-                break;
-
             case 'f':
                 cmdline_flags &= ~CMDLINE_OPT_DAEMON;
                 break;

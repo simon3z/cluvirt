@@ -1,7 +1,7 @@
 
 man_MANS		= cluvirtd.8 cluvirtadm.8
 
-MAINTAINERCLEANFILES	= Makefile.in $(man_MANS)
+MAINTAINERCLEANFILES	= Makefile.in
 
 
 HELP2MAN=help2man

@@ -64,12 +64,12 @@ void cpg_deliver(cpg_handle_t handle,
         return;
     }
     
-    if (n->joined != 0) {
+    if (n->status & CLUSTER_NODE_JOINED) {
         log_error("double answer from node %i", nodeid);
         return;
     }
     
-    n->joined = 1;
+    n->status |= CLUSTER_NODE_JOINED;
     domain_status_from_msg(&n->domain, msg + 1, msg_len);
 
     group_answers++;
@@ -109,7 +109,7 @@ void print_usage(char *binpath)
     printf("Usage: %s [OPTIONS]\n", binpath);
     printf("Virtual machines supervisor for openais cluster and libvirt.\n\n");
     printf("  -h, --help                 display this help and exit\n");
-    printf("  -v, --version              " \
+    printf("      --version              " \
            "display version information and exit\n");
     printf("  -D                         debug output enabled\n");
 }
@@ -119,26 +119,26 @@ void cmdline_options(char argc, char *argv[])
     int c, option_index = 0;
     static struct option long_options[] = {
         {"help",    no_argument,        0, 'h'},
-        {"version", no_argument,        0, 'v'},
+        {"version", no_argument,        0, 0},
         {0, 0, 0, 0}
     };
 
     cmdline_flags = 0x00;
 
     while (1) {    
-        c = getopt_long(argc, argv, "hvD", long_options, &option_index);
+        c = getopt_long(argc, argv, "hD", long_options, &option_index);
     
         if (c == -1)
             break;
 
         switch (c)
-        {
+        {                    
+            case 0: /* version */
+                cmdline_flags |= CMDLINE_OPT_VERSION;
+                break;
+
             case 'h':
                 cmdline_flags |= CMDLINE_OPT_HELP;
-                break;
-            
-            case 'v':
-                cmdline_flags |= CMDLINE_OPT_VERSION;
                 break;
 
             case 'D':
@@ -159,8 +159,19 @@ void print_status()
     printf("%6.6s  %-24.24s %-8.8s\n", "--", "----", "------");
         
     STAILQ_FOREACH(n, &cn_head, next) {
-        printf("%6.0i  %-24.24s %-8.8s\n",
-            n->id, n->host, (n->joined) ? "joined" : "missing");
+        printf("%6.0i  %-24.24s ", n->id, n->host);
+        
+        printf((n->status & CLUSTER_NODE_ONLINE) ? "online" : "offline");
+        
+        if (n->status & CLUSTER_NODE_LOCAL) {
+            printf(", local");
+        }
+        
+        if (n->status & CLUSTER_NODE_JOINED) {
+            printf(", cluvirtd");
+        }
+        
+        printf("\n");
     }
     
     printf("\n");

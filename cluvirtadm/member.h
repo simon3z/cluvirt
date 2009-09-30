@@ -25,11 +25,14 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <libcman.h>
 #include <status.h>
 
+#define CLUSTER_NODE_ONLINE     0x0001
+#define CLUSTER_NODE_LOCAL      0x0002
+#define CLUSTER_NODE_JOINED     0x0004
 
 typedef struct _cluster_node_t {
     int                             id;
     char                            *host;
-    int                             joined;
+    int                             status;
     domain_info_head_t              domain;
     STAILQ_ENTRY(_cluster_node_t)   next;
 } cluster_node_t;
