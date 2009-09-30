@@ -22,17 +22,20 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include <syslog.h>
 
+
 extern int utils_debug;
 
-#define log_debug(x, t...) \
-if (utils_debug) { \
-    printf("DEBUG(%s:%i|%s): " x "\n", __FILE__, __LINE__, __FUNCTION__, t); \
+
+#define log_debug(fmt, args...) \
+if (utils_debug) {  \
+    printf("DEBUG(%s:%i|%s): " fmt "\n",                \
+           __FILE__, __LINE__, __FUNCTION__, ##args);   \
 }
 
 #define log_error(fmt, args...) \
-do { \
-    log_debug(fmt, ##args); \
-    syslog(LOG_ERR, fmt, ##args); \
+do {    \
+    fprintf(stderr, "Error: " fmt "\n", ##args);  \
+    syslog(LOG_ERR, fmt, ##args);               \
 } while (0)
 
 
