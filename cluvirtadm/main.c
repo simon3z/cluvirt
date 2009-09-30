@@ -36,6 +36,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define CMDLINE_OPT_HELP        0x0001
 #define CMDLINE_OPT_VERSION     0x0002
 #define CMDLINE_OPT_DEBUG       0x0004
+#define CMDLINE_OPT_XMLOUT      0x0008
 
 
 static cluster_node_head_t  cn_head = STAILQ_HEAD_INITIALIZER(cn_head);
@@ -48,7 +49,6 @@ void cpg_deliver(cpg_handle_t handle,
         struct cpg_name *group_name, uint32_t nodeid,
         uint32_t pid, void *msg, int msg_len)
 {
-    domain_info_t       *d;
     cluster_node_t      *n;
     
     if (((char*)msg)[0] != 0x00) return; /* FIXME: improve message type */
@@ -95,23 +95,27 @@ void request_domain_info()
 void print_version()
 {
     printf("%s %s\n", PROGRAM_NAME, PACKAGE_VERSION);
-    printf("Copyright (C) 2009 Nethesis, Srl.\n");
-    printf("This is free software.  " \
-           "You may redistribute copies of it under the terms of\n");
-    printf("the GNU General Public License "\
-           "<http://www.gnu.org/licenses/gpl.html>.\n");
-    printf("There is NO WARRANTY, to the extent permitted by law.\n\n");
-    printf("Written by Federico Simoncelli.\n");
+    printf(
+        "Copyright (C) 2009 Nethesis, Srl.\n"
+        "This is free software.  "
+        "You may redistribute copies of it under the terms of\n"
+        "the GNU General Public License "
+        "<http://www.gnu.org/licenses/gpl.html>.\n"
+        "There is NO WARRANTY, to the extent permitted by law.\n\n"
+        "Written by Federico Simoncelli.\n"
+    );
 }
 
-void print_usage(char *binpath)
+void print_usage()
 {
-    printf("Usage: %s [OPTIONS]\n", binpath);
-    printf("Virtual machines supervisor for openais cluster and libvirt.\n\n");
-    printf("  -h, --help                 display this help and exit\n");
-    printf("      --version              " \
-           "display version information and exit\n");
-    printf("  -D                         debug output enabled\n");
+    printf("Usage: %s [OPTIONS]\n", PROGRAM_NAME);
+    printf(
+        "Virtual machines supervisor for openais cluster and libvirt.\n\n"
+        "  -h, --help                 display this help and exit\n"
+        "      --version              display version information and exit\n"
+        "  -x, --xml                  output in xml format\n"
+        "  -D                         debug output enabled\n"
+    );
 }
 
 void cmdline_options(char argc, char *argv[])
@@ -120,13 +124,14 @@ void cmdline_options(char argc, char *argv[])
     static struct option long_options[] = {
         {"help",    no_argument,        0, 'h'},
         {"version", no_argument,        0, 0},
+        {"xml",     no_argument,        0, 'x'},
         {0, 0, 0, 0}
     };
 
     cmdline_flags = 0x00;
 
     while (1) {    
-        c = getopt_long(argc, argv, "hD", long_options, &option_index);
+        c = getopt_long(argc, argv, "hxD", long_options, &option_index);
     
         if (c == -1)
             break;
@@ -140,6 +145,10 @@ void cmdline_options(char argc, char *argv[])
             case 'h':
                 cmdline_flags |= CMDLINE_OPT_HELP;
                 break;
+                
+            case 'x':
+                cmdline_flags |= CMDLINE_OPT_XMLOUT;
+                break;
 
             case 'D':
                 cmdline_flags |= CMDLINE_OPT_DEBUG;
@@ -150,7 +159,7 @@ void cmdline_options(char argc, char *argv[])
     log_debug("cmdline_flags: 0x%04x", cmdline_flags);
 }
 
-void print_status()
+void print_status_txt()
 {
     domain_info_t   *d;
     cluster_node_t  *n;
@@ -195,7 +204,7 @@ void print_status()
             vm_state = (d->status.state < sizeof(state_name)) ?
                         state_name[d->status.state] : state_name[0];
 
-            printf("%4i  %-20.20s %-24.24s    %-3.3c %6i",
+            printf("%4i  %-20.20s %-24.24s    %c   %6i",
                 d->id, d->name, n->host, vm_state, d->status.vncport);
             
             if (d->status.usage < 0) {      /* cpu usage not available */
@@ -206,6 +215,36 @@ void print_status()
             }
         }
     }
+}
+
+void print_status_xml()
+{
+    domain_info_t   *d;
+    cluster_node_t  *n;
+
+    printf("<?xml version=\"1.0\"?>\n"
+           "<%s version=\"%s\">\n<nodes>\n", PROGRAM_NAME, PACKAGE_VERSION);
+        
+    STAILQ_FOREACH(n, &cn_head, next) {
+        printf("  <node id=\"%i\" name=\"%s\" online=\"%i\""
+               " local=\"%i\" cluvirtd=\"%i\"/>\n", n->id, n->host, 
+            (n->status & CLUSTER_NODE_ONLINE) ? 1 : 0,
+            (n->status & CLUSTER_NODE_LOCAL)  ? 1 : 0,
+            (n->status & CLUSTER_NODE_JOINED) ? 1 : 0);
+    }
+    
+    printf("</nodes>\n<virtuals>\n");
+
+    STAILQ_FOREACH(n, &cn_head, next) {
+        LIST_FOREACH(d, &n->domain, next) {
+            printf("  <vm id=\"%i\" name=\"%s\" node=\"%s\""
+                   " state=\"%i\" vncport=\"%i\" cpu=\"%i\"/>\n",
+                d->id, d->name, n->host, d->status.state, d->status.vncport,
+                d->status.usage);
+        }
+    }
+    
+    printf("</virtuals>\n</%s>\n", PROGRAM_NAME);
 }
 
 
@@ -248,7 +287,12 @@ int main_loop(void)
         }
     }
 
-    print_status();
+    if (cmdline_flags & CMDLINE_OPT_XMLOUT) {
+        print_status_xml();
+    }
+    else {
+        print_status_txt();
+    }
     
     return 0;
 }
@@ -258,7 +302,7 @@ int main(int argc, char *argv[])
     cmdline_options(argc, argv);
 
     if (cmdline_flags & CMDLINE_OPT_HELP) {
-        print_usage(argv[0]);
+        print_usage();
         exit(EXIT_SUCCESS);
     }
     
