@@ -37,6 +37,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define XPATH_VNC_PORT          \
     "string(/domain/devices/graphics[@type='vnc']/@port)"
 
+#define XEN_HOST_DOMAIN         "Domain-0"
 #define LIBVIRT_ID_BUFFER_SIZE  64
 
 
@@ -78,6 +79,7 @@ int domain_status_update(char *uri, domain_info_head_t *di_head)
     for (i = 0; i < n; i++) {
         virDomain           *lv_domain;
         virDomainInfo       lv_info;
+        const char          *vm_name;
         unsigned long long  time_delta;
         
         if ((lv_domain = virDomainLookupByID(lvh, id[i])) == 0) {
@@ -90,13 +92,18 @@ int domain_status_update(char *uri, domain_info_head_t *di_head)
             goto clean_loop1;
         }
         
+        vm_name = virDomainGetName(lv_domain);
+        
+        /* skipping Domain-0 for xen hypervisor, FIXME: URI check? */
+        if (vm_name && !strcmp(vm_name, XEN_HOST_DOMAIN)) {
+            goto clean_loop1;
+        }
+        
         LIST_FOREACH(d, di_head, next) {
             if (d->id == id[i]) break;
         }
         
         if (d == 0) {
-            const char *vm_name;
-
             log_debug("adding new domain info: %i", id[i]);
             
             d = malloc(sizeof(domain_info_t));
@@ -105,14 +112,9 @@ int domain_status_update(char *uri, domain_info_head_t *di_head)
             d->id               = id[i];
             
             /* the following values won't be updated anymore */
-            
-            if ((vm_name = virDomainGetName(lv_domain)) == 0) {
-                d->name         = strdup("(unknown)");
-            }
-            else {
-                d->name         = strdup(vm_name);
-            }
-            
+            d->name             = (vm_name == 0) ? 
+                                    strdup("(unknown)") : strdup(vm_name);
+
             d->status.memory    = lv_info.memory;
             d->status.ncpu      = lv_info.nrVirtCpu;
             d->status.vncport   = _libvirt_vncport(lv_domain);
