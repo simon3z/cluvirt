@@ -154,6 +154,17 @@ void print_status()
 {
     domain_info_t   *d;
     cluster_node_t  *n;
+    char            vm_state;
+
+    static char     state_name[] = {
+            'N',    /* VIR_DOMAIN_NOSTATE   =   0 */
+            'R',    /* VIR_DOMAIN_RUNNING   =   1 */
+            'B',    /* VIR_DOMAIN_BLOCKED	= 	2 */
+            'P',    /* VIR_DOMAIN_PAUSED	= 	3 */
+            'S',    /* VIR_DOMAIN_SHUTDOWN	= 	4 */
+            's',    /* VIR_DOMAIN_SHUTOFF	= 	5 */
+            'C'     /* VIR_DOMAIN_CRASHED	= 	6 */
+    };
 
     printf("%6.6s  %-24.24s %-8.8s\n", "ID", "Host", "Status");
     printf("%6.6s  %-24.24s %-8.8s\n", "--", "----", "------");
@@ -175,15 +186,18 @@ void print_status()
     }
     
     printf("\n");
-    printf("%6.6s  %-24.24s %-24.24s %6.6s %8.8s\n",
-                    "ID", "Name", "Host", "VNC#", "CPU%");
-    printf("%6.6s  %-24.24s %-24.24s %6.6s %8.8s\n",
-                    "--", "----", "----", "----", "----");
+    printf("%6.6s  %-20.20s %-24.24s %6.6s %6.6s %8.8s\n",
+                    "ID", "Name", "Host", "State", "VNC#", "CPU%");
+    printf("%6.6s  %-20.20s %-24.24s %6.6s %6.6s %8.8s\n",
+                    "--", "----", "----", "-----", "----", "----");
 
     STAILQ_FOREACH(n, &cn_head, next) {
         LIST_FOREACH(d, &n->domain, next) {
-            printf("%6.0i  %-24.24s %-24.24s %6.0i %8i\n",
-                d->id, d->name, n->host, d->status.vncport, d->status.usage);
+            vm_state = (d->status.state < sizeof(state_name)) ?
+                        state_name[d->status.state] : state_name[0];
+            printf("%6i  %-20.20s %-24.24s    %-3.3c %6i %8i\n",
+                d->id, d->name, n->host, vm_state, d->status.vncport,
+                d->status.usage);
         }
     }
 }
