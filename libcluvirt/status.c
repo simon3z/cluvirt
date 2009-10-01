@@ -35,7 +35,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define XPATH_VNC_PORT          \
     "string(/domain/devices/graphics[@type='vnc']/@port)"
 
-#define XEN_HOST_DOMAIN         "Domain-0"
 #define LIBVIRT_ID_BUFFER_SIZE  64
 
 
@@ -77,8 +76,11 @@ int domain_status_update(char *uri, domain_info_head_t *di_head)
     for (i = 0; i < n; i++) {
         virDomain           *lv_domain;
         virDomainInfo       lv_info;
-        const char          *vm_name;
         unsigned long long  time_delta;
+        
+        if (id[i] == 0) { /* skipping Domain-0 for xen hypervisor */
+            continue;
+        }
         
         if ((lv_domain = virDomainLookupByID(lvh, id[i])) == 0) {
             log_error("unable to lookup domain %i", id[i]);
@@ -90,18 +92,13 @@ int domain_status_update(char *uri, domain_info_head_t *di_head)
             goto clean_loop1;
         }
         
-        vm_name = virDomainGetName(lv_domain);
-        
-        /* skipping Domain-0 for xen hypervisor, FIXME: URI check? */
-        if (vm_name && !strcmp(vm_name, XEN_HOST_DOMAIN)) {
-            goto clean_loop1;
-        }
-        
         LIST_FOREACH(d, di_head, next) {
             if (d->id == id[i]) break;
         }
         
         if (d == 0) {
+            const char *vm_name;
+
             log_debug("adding new domain info: %i", id[i]);
             
             d = malloc(sizeof(domain_info_t));
@@ -110,8 +107,12 @@ int domain_status_update(char *uri, domain_info_head_t *di_head)
             d->id               = id[i];
             
             /* the following values won't be updated anymore */
-            d->name             = (vm_name == 0) ? 
-                                    strdup("(unknown)") : strdup(vm_name);
+            if ((vm_name = virDomainGetName(lv_domain)) == 0) {
+                d->name         = strdup("(unknown)");
+            }
+            else {
+                d->name         = strdup(vm_name);
+            }
 
             if (virDomainGetUUID(lv_domain, d->uuid) < 0) {
                 memset(d->uuid, 0, VIR_UUID_BUFLEN);
@@ -135,10 +136,10 @@ int domain_status_update(char *uri, domain_info_head_t *di_head)
         time_delta = ((time_now.tv_sec - d->update.tv_sec) * 1000000ull) +
                         (time_now.tv_usec - d->update.tv_usec);
         
-        /* update cpu utilization every 10 seconds */
-        if (time_delta > (10 * 1000000ull)) { /* > 0 to avoid divide-by-zero */
+        /* update cpu utilization if time_delta > 1 second */
+        if (time_delta > 1000000ull) { /* > 0 to avoid divide-by-zero */
             d->status.usage     = ((lv_info.cpuTime - d->status.cputime) /
-                                    lv_info.nrVirtCpu) / (time_delta * 10);
+                                    lv_info.nrVirtCpu) / (time_delta);
 
             d->status.cputime   = lv_info.cpuTime;
             d->update.tv_sec    = time_now.tv_sec;

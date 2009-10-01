@@ -159,7 +159,7 @@ void cmdline_options(char argc, char *argv[])
     log_debug("cmdline_flags: 0x%04x", cmdline_flags);
 }
 
-void print_status_txt()
+void print_status_txt(void)
 {
     domain_info_t   *d;
     cluster_node_t  *n;
@@ -211,13 +211,14 @@ void print_status_txt()
                 printf(" %8.8s\n", "na");
             }
             else {
-                printf(" %8i\n", d->status.usage);
+                printf(" %6i.%i\n",
+                    d->status.usage / 10, d->status.usage % 10);
             }
         }
     }
 }
 
-void print_status_xml()
+void print_status_xml(void)
 {
     domain_info_t   *d;
     cluster_node_t  *n;
