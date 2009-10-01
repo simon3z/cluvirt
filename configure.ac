@@ -6,9 +6,11 @@ AC_INIT([cluvirt], [0.0.90], [federico.simoncelli@nethesis.it])
 AM_INIT_AUTOMAKE()
 AC_CONFIG_SRCDIR([cluvirtd/main.c], [cluvadm/main.c])
 AC_CONFIG_HEADER([config.h])
+AC_CONFIG_MACRO_DIR([m4])
 
 # Checks for programs.
 AC_PROG_CC
+AM_PROG_CC_C_O
 AC_PROG_LIBTOOL
 
 # Checks for x86_64 lib path.

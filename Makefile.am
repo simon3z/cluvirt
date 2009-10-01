@@ -7,3 +7,5 @@ MAINTAINERCLEANFILES	= aclocal.m4 configure depcomp ltmain.sh \
 
 SUBDIRS                 = libcluvirt cluvirtd cluvirtadm man
 
+ACLOCAL_AMFLAGS		= -I m4
+
