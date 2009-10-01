@@ -119,31 +119,29 @@ int domain_status_update(char *uri, domain_info_head_t *di_head)
                 log_error("unable to get domain uuid %i", id[i]);
             }
 
-            d->status.memory    = lv_info.memory;
-            d->status.ncpu      = lv_info.nrVirtCpu;
-            d->status.vncport   = _libvirt_vncport(lv_domain);
+            d->memory       = lv_info.memory;
+            d->ncpu         = lv_info.nrVirtCpu;
+            d->vncport      = _libvirt_vncport(lv_domain);
             
             /* initializing cpu load parameters */
-            d->status.usage     = -1;
-            d->status.cputime   = lv_info.cpuTime;
-            d->update.tv_sec    = time_now.tv_sec;
-            d->update.tv_usec   = time_now.tv_usec;
+            d->usage        = 0;
+            d->cputime      = lv_info.cpuTime;
+            memcpy(&d->update, &time_now, sizeof(d->update));
         }
 
         /* these values will be updated at each call */
-        d->status.state         = lv_info.state;
+        d->state    = lv_info.state;
         
-        time_delta = ((time_now.tv_sec - d->update.tv_sec) * 1000000ull) +
+        time_delta  = ((time_now.tv_sec - d->update.tv_sec) * 1000000ull) +
                         (time_now.tv_usec - d->update.tv_usec);
         
         /* update cpu utilization if time_delta > 1 second */
         if (time_delta > 1000000ull) { /* > 0 to avoid divide-by-zero */
-            d->status.usage     = ((lv_info.cpuTime - d->status.cputime) /
+            d->usage        = ((lv_info.cpuTime - d->cputime) /
                                     lv_info.nrVirtCpu) / (time_delta);
 
-            d->status.cputime   = lv_info.cpuTime;
-            d->update.tv_sec    = time_now.tv_sec;
-            d->update.tv_usec   = time_now.tv_usec;
+            d->cputime      = lv_info.cpuTime;
+            memcpy(&d->update, &time_now, sizeof(d->update));
         }
 
 clean_loop1:

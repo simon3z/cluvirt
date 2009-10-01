@@ -92,6 +92,21 @@ void request_domain_info()
     send_message(request_msg, sizeof(request_msg));
 }
 
+char *uuid_to_string(unsigned char *uuid)
+{
+    static char _uuid_string[VIR_UUID_STRING_BUFLEN];
+
+    snprintf(_uuid_string, VIR_UUID_STRING_BUFLEN,
+        "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+        uuid[0],   uuid[1],    uuid[2],    uuid[3],
+        uuid[4],   uuid[5],    uuid[6],    uuid[7],
+        uuid[8],   uuid[9],    uuid[10],   uuid[11],
+        uuid[12],  uuid[13],   uuid[14],   uuid[15]);
+    _uuid_string[VIR_UUID_STRING_BUFLEN-1] = '\0';
+
+    return _uuid_string;
+}
+
 void print_version()
 {
     printf("%s %s\n", PROGRAM_NAME, PACKAGE_VERSION);
@@ -194,26 +209,19 @@ void print_status_txt(void)
     }
     
     printf("\n");
-    printf("%4.4s  %-20.20s %-24.24s %6.6s %6.6s %8.8s\n",
-                    "ID", "VM Name", "Host", "State", "VNC#", "CPU%");
-    printf("%4.4s  %-20.20s %-24.24s %6.6s %6.6s %8.8s\n",
-                    "--", "-------", "----", "-----", "----", "----");
+    printf("%4.4s  %-20.20s %-24.24s %2.2s %6.6s %6.6s %6.6s\n",
+                    "ID", "VM Name", "Host", "St", "VNC#", "Mem", "CPU%");
+    printf("%4.4s  %-20.20s %-24.24s %2.2s %6.6s %6.6s %6.6s\n",
+                    "--", "-------", "----", "--", "----", "---", "----");
 
     STAILQ_FOREACH(n, &cn_head, next) {
         LIST_FOREACH(d, &n->domain, next) {
-            vm_state = (d->status.state < sizeof(state_name)) ?
-                        state_name[d->status.state] : state_name[0];
+            vm_state = (d->state < sizeof(state_name)) ?
+                            state_name[d->state] : state_name[0];
 
-            printf("%4i  %-20.20s %-24.24s    %c   %6i",
-                d->id, d->name, n->host, vm_state, d->status.vncport);
-            
-            if (d->status.usage < 0) {      /* cpu usage not available */
-                printf(" %8.8s\n", "na");
-            }
-            else {
-                printf(" %6i.%i\n",
-                    d->status.usage / 10, d->status.usage % 10);
-            }
+            printf("%4i  %-20.20s %-24.24s  %c %6i %6i %4i.%1.1i\n",
+                    d->id, d->name, n->host, vm_state, d->vncport,
+                    d->memory / 1024, d->usage / 10, d->usage % 10);
         }
     }
 }
@@ -238,10 +246,11 @@ void print_status_xml(void)
 
     STAILQ_FOREACH(n, &cn_head, next) {
         LIST_FOREACH(d, &n->domain, next) {
-            printf("  <vm id=\"%i\" name=\"%s\" node=\"%s\""
-                   " state=\"%i\" vncport=\"%i\" cpu=\"%i\"/>\n",
-                d->id, d->name, n->host, d->status.state, d->status.vncport,
-                d->status.usage);
+            printf("  <vm id=\"%i\" uuid=\"%s\"\n"
+                   "      name=\"%s\" node=\"%s\" state=\"%i\" vncport=\"%i\""
+                   " memory=\"%i\" cpu=\"%i\"/>\n",
+                        d->id, uuid_to_string(d->uuid), d->name,
+                        n->host, d->state, d->vncport, d->memory, d->usage);
         }
     }
     

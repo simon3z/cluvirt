@@ -28,23 +28,33 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <libvirt/libvirt.h>
 
 
-typedef struct _domain_status_t {
-    uint8_t                         state;
-    int8_t                          usage;
-    uint32_t                        memory;
-    uint16_t                        ncpu;
-    uint16_t                        vncport;
-    uint64_t                        cputime;
-} domain_status_t;
-
 typedef struct _domain_info_t {
-    uint32_t                        id;
-    char                            *name;
-    unsigned char                   uuid[VIR_UUID_BUFLEN];
-    struct timeval                  update;
-    domain_status_t                 status;
-    LIST_ENTRY(_domain_info_t)      next;
+    int                         id;
+    char                        *name;
+    unsigned char               uuid[VIR_UUID_BUFLEN];
+    unsigned char               state;
+    unsigned long               memory;
+    unsigned short              ncpu;
+    unsigned long long          cputime;
+    unsigned short              vncport;
+    unsigned short              usage;
+    struct timeval              update;
+    LIST_ENTRY(_domain_info_t)  next;
 } domain_info_t;
+
+/* not used yet, endianness */
+typedef struct __attribute__ ((__packed__)) _domain_info_msg_t {
+    uint32_t                    id;
+    int32_t                     usage;
+    uint64_t                    cputime;
+    uint32_t                    memory;
+    uint16_t                    ncpu;
+    uint16_t                    vncport;
+    int8_t                      state;
+    uint8_t                     uuid[VIR_UUID_BUFLEN];
+    uint32_t                    data_size;
+    unsigned char               *payload[0];
+} domain_info_msg_t;
 
 
 typedef LIST_HEAD(_domain_info_head_t, _domain_info_t) domain_info_head_t;

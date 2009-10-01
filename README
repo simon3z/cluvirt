@@ -3,8 +3,8 @@ General Instructions
 
 Copyright (C) 2009 Federico Simoncelli <federico.simoncelli@nethesis.it>
 
-This file is free documentation; the Free Software Foundation gives
-unlimited permission to copy, distribute and modify it.
+This file is free documentation; you have unlimited permission to copy,
+distribute and modify it.
 
 Build Requirements
 ==================
@@ -44,16 +44,17 @@ Run cluvirtd on each cluster node:
 Fetch the current status using cluvirtadm:
 
   # cluvirtadm
-      ID  Host                     Status  
-      --  ----                     ------  
-       1  nvc1                     online, local, cluvirtd
-       2  nvc2                     online, cluvirtd
+    ID  Member Name              Status  
+    --  -----------              ------  
+     1  nvc1                     online, local, cluvirtd
+     2  nvc2                     online, cluvirtd
   
-      ID  Name                 Host                      State   VNC#     CPU%
-      --  ----                 ----                      -----   ----     ----
-       2  demo1                nvc1                        R     5901        1
-       3  nserv1               nvc1                        R     5900        5
-      52  efw                  nvc1                        R     5903        0
-      84  nserv2               nvc2                        P     5902        0
-      89  rh5buildsys1         nvc2                        R     5900        0
+    ID  VM Name              Host                     St   VNC#    Mem   CPU%
+    --  -------              ----                     --   ----    ---   ----
+     2  demo1                nvc1                      R   5901    256    1.9
+     3  nvoice2              nvc1                      R   5900    512    0.1
+    63  nserv1               nvc1                      R   5902    256    0.0
+    80  efw                  nvc2                      R   5903    256    0.5
+    84  nserv2               nvc2                      P   5902    256    0.0
+    90  rh5buildsys1         nvc2                      R   5900    512    2.1
 
