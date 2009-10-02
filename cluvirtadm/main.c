@@ -42,7 +42,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 static cluster_node_head_t  cn_head = STAILQ_HEAD_INITIALIZER(cn_head);
 
 static int cmdline_flags;
-static int group_members = -1, group_answers = 0; /* FIXME: something smarter */
+static int group_members = -1, group_replies = 0; /* FIXME: something smarter */
 
 
 void cpg_deliver(cpg_handle_t handle,
@@ -70,9 +70,9 @@ void cpg_deliver(cpg_handle_t handle,
     }
     
     n->status |= CLUSTER_NODE_JOINED;
-    domain_status_from_msg(&n->domain, msg + 1, msg_len);
+    domain_status_from_msg(&n->domain, msg + 1, msg_len - 1);
 
-    group_answers++;
+    group_replies++;
 }
 
 void cpg_confchg(cpg_handle_t handle,
@@ -88,7 +88,7 @@ void cpg_confchg(cpg_handle_t handle,
 
 void request_domain_info()
 {
-    char request_msg[] = { 0x01 };
+    char request_msg[] = { 0x01 }; /* FIXME: improve message type */
     send_message(request_msg, sizeof(request_msg));
 }
 
@@ -248,7 +248,7 @@ void print_status_xml(void)
         LIST_FOREACH(d, &n->domain, next) {
             printf("  <vm id=\"%i\" uuid=\"%s\"\n"
                    "      name=\"%s\" node=\"%s\" state=\"%i\" vncport=\"%i\""
-                   " memory=\"%i\" cpu=\"%i\"/>\n",
+                   " memory=\"%i\" usage=\"%i\"/>\n",
                         d->id, uuid_to_string(d->uuid), d->name,
                         n->host, d->state, d->vncport, d->memory, d->usage);
         }
@@ -292,7 +292,7 @@ int main_loop(void)
             dispatch_message();
         }
         
-        if (group_answers >= group_members) { /* FIXME: something smarter */
+        if (group_replies >= group_members) { /* FIXME: something smarter */
             break;
         }
     }

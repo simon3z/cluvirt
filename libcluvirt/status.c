@@ -218,55 +218,81 @@ clean_exit1:
     return port;
 }
 
-size_t domain_status_to_msg(
+int domain_status_to_msg(
         domain_info_head_t *di_head, char *msg, size_t max_size)
 {
-    size_t          p_offset = 0;
-    domain_info_t   *d;
+    domain_info_t       *d;
+    domain_info_msg_t   *m;
+    size_t              p_offset, n_offset, name_size;
     
-    /* FIXME: endianness */
+    p_offset = 0;
     
     LIST_FOREACH(d, di_head, next) {
-        size_t      name_len;
-        size_t      n_offset;
-        
-        name_len    = strlen(d->name) + 1;
-        n_offset    = p_offset + sizeof(domain_info_t) + name_len;
+        name_size   = strlen(d->name) + 1;
+        n_offset    = p_offset + sizeof(domain_info_msg_t) + name_size;
         
         if (n_offset > max_size) {
             log_error("message buffer is not large enough: %lu", n_offset);
             return -1;
         }
         
-        memcpy(msg + p_offset, d, sizeof(domain_info_t));
-        p_offset += sizeof(domain_info_t);
+        m = (domain_info_msg_t*) (msg + p_offset);
         
-        memcpy(msg + p_offset, d->name, name_len);
+        m->id               = be_swap32(d->id);
+        m->memory           = be_swap32(d->memory);
+        m->cputime          = be_swap64(d->cputime);
+        m->usage            = be_swap16(d->usage);
+        m->ncpu             = be_swap16(d->ncpu);
+        m->vncport          = be_swap16(d->vncport);
+        m->state            = d->state;
+        m->payload_size     = be_swap32(name_size);
+
+        memcpy(m->uuid, d->uuid, sizeof(m->uuid));
+        memcpy(m->payload, d->name, name_size);
         
-        p_offset = n_offset;
+        log_debug("p_offset: %lu, n_offset: %lu, m: %p", p_offset, n_offset, m);
+        p_offset            = n_offset;
     }
     
     return p_offset;
 }
 
-size_t domain_status_from_msg(
+int domain_status_from_msg(
         domain_info_head_t *di_head, char *msg, size_t msg_size)
 {
-    size_t          p_offset = 0;
-    domain_info_t   *d;
+    domain_info_t       *d;
+    domain_info_msg_t   *m;
+    size_t              p_offset = 0, n_offset, name_size;
     
-    /* FIXME: endianness */
-    
-    while (p_offset + sizeof(domain_info_t) < msg_size) { 
+    while ((p_offset + sizeof(domain_info_msg_t)) < msg_size) {
         d = malloc(sizeof(domain_info_t));
+        m = (domain_info_msg_t*) (msg + p_offset);
         
-        memcpy(d, msg + p_offset, sizeof(domain_info_t));
-        p_offset    += sizeof(domain_info_t);
+        d->id           = be_swap32(m->id);
+        d->memory       = be_swap32(m->memory);
+        d->cputime      = be_swap64(m->cputime);
+        d->usage        = be_swap16(m->usage);
+        d->ncpu         = be_swap16(m->ncpu);
+        d->vncport      = be_swap16(m->vncport);
+        d->state        = m->state;
+        name_size       = be_swap32(m->payload_size);
         
+        n_offset        = p_offset + sizeof(domain_info_msg_t) + name_size;
+        
+        if (n_offset > msg_size) {
+            log_error("malformed message: %lu %lu", n_offset, msg_size);
+            return -1;
+        }
+        
+        d->name         = malloc(name_size);
+        
+        memcpy(d->name, m->payload, name_size);
+        memcpy(d->uuid, m->uuid, sizeof(d->uuid));
+
         LIST_INSERT_HEAD(di_head, d, next);
 
-        d->name      = strdup(msg + p_offset);        
-        p_offset    += strlen(msg + p_offset) + 1;
+        log_debug("p_offset: %lu, n_offset: %lu, m: %p", p_offset, n_offset, m);
+        p_offset        = n_offset;
     }
 
     return p_offset;

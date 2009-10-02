@@ -59,6 +59,7 @@ void cpg_deliver(cpg_handle_t handle,
         reply_msg[0] = 0x00;
         msg_size = domain_status_to_msg(
                         &di_head, &reply_msg[1], MESSAGE_BUFFER_SIZE - 1);
+        /* FIXME: better error handling */
         log_debug("sending domain info: %lu", msg_size);
         send_message(reply_msg, msg_size + 1);
     }

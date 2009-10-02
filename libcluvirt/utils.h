@@ -20,6 +20,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #ifndef __UTILS_H_
 #define __UTILS_H_
 
+#include <endian.h>
+#include <byteswap.h>
+
 #include <syslog.h>
 
 
@@ -37,6 +40,17 @@ do {    \
     fprintf(stderr, "Error: " fmt "\n", ##args);  \
     syslog(LOG_ERR, fmt, ##args);               \
 } while (0)
+
+
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+#define be_swap16(x) bswap_16(x)
+#define be_swap32(x) bswap_32(x)
+#define be_swap64(x) bswap_64(x)
+#else
+#define be_swap16(x) (x)
+#define be_swap32(x) (x)
+#define be_swap64(x) (x)
+#endif
 
 
 #endif
