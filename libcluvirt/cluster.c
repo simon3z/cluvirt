@@ -32,6 +32,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 static cpg_handle_t daemon_handle;
 static struct cpg_name daemon_name;
+static unsigned int local_nodeid;
 
 
 int setup_cpg(cpg_callbacks_t *cpg_callbacks)
@@ -41,14 +42,14 @@ int setup_cpg(cpg_callbacks_t *cpg_callbacks)
 
     err = cpg_initialize(&daemon_handle, cpg_callbacks);
     if (err != CPG_OK) {
-            log_debug("cpg_initialize error %d", err);
+            log_error("unable to initialize cpg: %d", err);
             return -1;
     }
 
     cpg_fd_get(daemon_handle, &fd);
     
     if (fd < 0) {
-            log_debug("cpg_fd_get error %d", err);
+            log_error("unable to get the cpg file descriptor: %d", err);
             return -1;
     }
 
@@ -60,17 +61,30 @@ retry:
     err = cpg_join(daemon_handle, &daemon_name);
 
     if (err == CPG_ERR_TRY_AGAIN) { 
-            sleep(1);
-            goto retry;
+        sleep(1);
+        goto retry;
     }
     if (err != CPG_OK) {
-            log_debug("cpg_join error %d", err);
-            cpg_finalize(daemon_handle);
-            return -1;
+        log_error("unable to join the cpg group %d", err);
+        goto exit_fail;
+    }
+    
+    if ((err = cpg_local_get(daemon_handle, &local_nodeid)) != CPG_OK) {
+        log_error("unable to get the local nodeid %d", err);
+        goto exit_fail;
     }
 
-    log_debug("cpg %d", fd);
+    log_debug("cpg file descriptor: %d", fd);
     return fd;
+
+exit_fail:
+    cpg_finalize(daemon_handle);
+    return -1;
+}
+
+unsigned int get_local_nodeid(void)
+{
+    return local_nodeid;
 }
 
 void dispatch_message(void)
@@ -93,20 +107,17 @@ retry:
     err = cpg_mcast_joined(daemon_handle, CPG_TYPE_AGREED, &iov, 1);
     
     if (err == CPG_ERR_TRY_AGAIN) {
-            retries++;
-            usleep(1000);
-            if (!(retries % 100))
-                    log_error("retry %d", retries);
-            goto retry;
+        retries++;
+        usleep(1000);
+        goto retry;
     }
     if (err != CPG_OK) {
-            log_error("error %d handle %llx",
-                      err, (unsigned long long) &daemon_handle);
-            return -1;
+        log_error("unable to send message: %d", err);
+        return -1;
     }
 
     if (retries) {
-            log_debug("retried %d", retries);
+        log_debug("message sent after %d retries", retries);
     }
 
     return 0;

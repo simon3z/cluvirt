@@ -37,6 +37,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 int setup_cpg(cpg_callbacks_t *);
 void dispatch_message(void);
 int send_message(void *, int);
+unsigned int get_local_nodeid(void);
 
 
 #endif
