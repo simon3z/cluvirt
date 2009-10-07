@@ -5,7 +5,7 @@ MAINTAINERCLEANFILES	= aclocal.m4 configure depcomp ltmain.sh \
 			  compile config.h.in config.h.in~ \
 			  Makefile.in
 
-SUBDIRS                 = libcluvirt cluvirtd cluvirtadm man
+SUBDIRS                 = src man
 
 ACLOCAL_AMFLAGS		= -I m4
 

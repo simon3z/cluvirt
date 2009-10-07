@@ -4,7 +4,7 @@
 AC_PREREQ(2.59)
 AC_INIT([cluvirt], [0.0.90], [federico.simoncelli@nethesis.it])
 AM_INIT_AUTOMAKE()
-AC_CONFIG_SRCDIR([cluvirtd/main.c], [cluvadm/main.c])
+AC_CONFIG_SRCDIR([src/cluvirtd.c])
 AC_CONFIG_HEADER([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -60,9 +60,7 @@ AC_FUNC_SELECT_ARGTYPES
 AC_CHECK_FUNCS([memset select strdup strtol])
 
 AC_CONFIG_FILES([Makefile
-                 libcluvirt/Makefile 
-                 cluvirtd/Makefile
-                 cluvirtadm/Makefile
+                 src/Makefile 
                  man/Makefile
                  cluvirt.spec
                  cluvirtd.init
