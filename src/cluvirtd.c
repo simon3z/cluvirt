@@ -27,7 +27,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <errno.h>
 #include <error.h>
 
-#include "status.h"
+#include <cluvirt.h>
+
 #include "cluster.h"
 #include "utils.h"
 
@@ -41,6 +42,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define CMDLINE_OPT_DEBUG       0x0004
 #define CMDLINE_OPT_DAEMON      0x0008
 
+
+int utils_debug = 0;
 
 static domain_info_head_t  di_head = LIST_HEAD_INITIALIZER();
 

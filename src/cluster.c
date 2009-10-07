@@ -25,7 +25,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <errno.h>
 #include <error.h>
 
-#include "status.h"
+#include <cluvirt.h>
+
 #include "cluster.h"
 #include "utils.h"
 

@@ -23,7 +23,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <sys/queue.h>
 
 #include <libcman.h>
-#include <status.h>
+#include <cluvirt.h>
 
 #define CLUSTER_NODE_ONLINE     0x0001
 #define CLUSTER_NODE_LOCAL      0x0002

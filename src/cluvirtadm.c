@@ -26,7 +26,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include <libcman.h>
 
-#include "status.h"
+#include <cluvirt.h>
+
 #include "cluster.h"
 #include "member.h"
 #include "utils.h"
@@ -38,6 +39,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define CMDLINE_OPT_DEBUG       0x0004
 #define CMDLINE_OPT_XMLOUT      0x0008
 
+int utils_debug = 0;
 
 static cluster_node_head_t  cn_head = STAILQ_HEAD_INITIALIZER(cn_head);
 

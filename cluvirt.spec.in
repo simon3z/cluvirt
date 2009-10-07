@@ -1,7 +1,7 @@
 Name:           cluvirt
 Version:        @VERSION@
 Release:        1%{?dist}
-Summary:        Virtual machines supervisor for openais cluster.
+Summary:        Virtual machines supervisor for openais cluster and libvirt.
 
 Group:          System Environment/Daemons
 License:        GPL
@@ -9,11 +9,30 @@ URL:            http://github.com/simon3z/cluvirt
 Source0:        %{name}-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
+Requires:	libcluvirt = %{version}-%{release}
 BuildRequires:  openais-devel >= 0.80, cman-devel >= 2
 BuildRequires:  libvirt-devel >= 0.3, libxml2-devel >= 2
 
 %description
-Virtual machines supervisor for openais cluster.
+Virtual machines supervisor for openais cluster and libvirt.
+
+
+%package -n libcluvirt
+Summary:        Virtual machines supervisor libraries for openais cluster and libvirt.
+Group:          Development/Libraries
+
+
+%description -n libcluvirt
+Virtual machines supervisor libraries for openais cluster and libvirt.
+
+
+%package -n libcluvirt-devel
+Summary:        Files needed for building applications with libcluvirt.
+Group:          Development/Libraries
+
+
+%description -n libcluvirt-devel
+Files needed for building applications with libcluvirt.
 
 
 %prep
@@ -40,6 +59,9 @@ rm -rf $RPM_BUILD_ROOT
 /sbin/chkconfig --add cluvirtd
 
 
+%post -n libcluvirt -p /sbin/ldconfig
+
+
 %preun
 if [ $1 = 0 ]; then
     /sbin/service cluvirtd stop > /dev/null 2>&1
@@ -55,6 +77,17 @@ fi
 %{_sysconfdir}/rc.d/init.d/cluvirtd
 %{_mandir}/man8/cluvirtd.8.gz
 %{_mandir}/man8/cluvirtadm.8.gz
+
+
+%files -n libcluvirt
+%{_libdir}/libcluvirt.so.*
+
+
+%files -n libcluvirt-devel
+%{_includedir}/cluvirt.h
+%{_libdir}/libcluvirt.so
+%{_libdir}/libcluvirt.a
+%{_libdir}/libcluvirt.la
 
 
 %changelog
