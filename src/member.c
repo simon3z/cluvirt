@@ -26,7 +26,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include <libcman.h>
 
-#include "member.h"
+#include <cluvirt.h>
+
 #include "utils.h"
 
 

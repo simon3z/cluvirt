@@ -17,8 +17,12 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#ifndef __STATUS_H_
-#define __STATUS_H_
+#ifndef __CLUVIRT_H_
+#define __CLUVIRT_H_
+
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 
 #include <stdint.h>
 
@@ -26,6 +30,22 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <sys/queue.h>
 
 #include <libvirt/libvirt.h>
+
+
+#ifdef HAVE_COROSYNC_CPG_H
+#include <corosync/cpg.h>
+#else
+#include <openais/cpg.h>
+#endif
+
+
+#define CLUVIRT_GROUP_NAME      "cluvirtd"
+
+
+int setup_cpg(cpg_callbacks_t *);
+void dispatch_message(void);
+int send_message(void *, int);
+unsigned int get_local_nodeid(void);
 
 
 typedef struct _domain_info_t {
@@ -57,9 +77,23 @@ typedef struct __attribute__ ((__packed__)) _domain_info_msg_t {
     uint8_t                     payload[0];
 } domain_info_msg_t;
 
-
 typedef LIST_HEAD(_domain_info_head_t, _domain_info_t) domain_info_head_t;
 
+#define CLUSTER_NODE_ONLINE     0x0001
+#define CLUSTER_NODE_LOCAL      0x0002
+#define CLUSTER_NODE_JOINED     0x0004
+
+typedef struct _cluster_node_t {
+    int                             id;
+    char                            *host;
+    int                             status;
+    domain_info_head_t              domain;
+    STAILQ_ENTRY(_cluster_node_t)   next;
+} cluster_node_t;
+
+typedef STAILQ_HEAD(_cluster_node_head_t, _cluster_node_t) cluster_node_head_t;
+
+int member_init_list(cluster_node_head_t *);
 
 int domain_status_update(char *, domain_info_head_t *);
 int domain_status_to_msg(domain_info_head_t *, char *, size_t);

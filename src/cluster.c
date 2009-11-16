@@ -27,7 +27,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include <cluvirt.h>
 
-#include "cluster.h"
 #include "utils.h"
 
 
@@ -92,6 +91,8 @@ void dispatch_message(void)
 {
     if (cpg_dispatch(daemon_handle, CPG_DISPATCH_ALL) != CPG_OK) {
         log_error("unable to dispatch: %i", errno);
+        /* FIXME: return an error and try to reconnect */
+        exit(EXIT_FAILURE);
     }
 }
 

@@ -28,8 +28,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include <cluvirt.h>
 
-#include "cluster.h"
-#include "member.h"
 #include "utils.h"
 
 

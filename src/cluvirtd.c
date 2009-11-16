@@ -29,11 +29,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include <cluvirt.h>
 
-#include "cluster.h"
 #include "utils.h"
 
 
-#define MESSAGE_BUFFER_SIZE     1024
+#define MESSAGE_BUFFER_SIZE     8192
 #define DEVNULL_PATH            "/dev/null"
 
 #define PROGRAM_NAME            "cluvirtd"
