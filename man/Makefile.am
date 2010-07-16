@@ -1,16 +1,13 @@
 
-man_MANS		= cluvirtd.8 cluvirtadm.8
+dist_man8_MANS		= cluvirtd.8 cluvirtadm.8
 
-MAINTAINERCLEANFILES	= Makefile.in
+MAINTAINERCLEANFILES	= Makefile.in $(dist_man8_MANS)
 
+EXTRA_DIST		= $(dist_man8_MANS)
 
-HELP2MAN=help2man
+HELP2MAN		= help2man
+SUFFIXES		= .x .8
 
-cluvirtd.8:
-	$(HELP2MAN) -s 8 \
-	    -I cluvirtd.x -N -o $@ $(top_srcdir)/cluvirtd/cluvirtd
-
-cluvirtadm.8:
-	$(HELP2MAN) -s 8 \
-	    -I cluvirtadm.x -N -o $@ $(top_srcdir)/cluvirtadm/cluvirtadm
+.x.8:
+	$(HELP2MAN) -s 8 -I $< -o $@ $(top_srcdir)/src/$*
 
