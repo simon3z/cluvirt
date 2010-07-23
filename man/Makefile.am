@@ -3,7 +3,7 @@ dist_man8_MANS		= cluvirtd.8 cluvirtadm.8
 
 MAINTAINERCLEANFILES	= Makefile.in $(dist_man8_MANS)
 
-EXTRA_DIST		= $(dist_man8_MANS)
+EXTRA_DIST		= $(dist_man8_MANS) $(dist_man8_MANS:.8=.x)
 
 HELP2MAN		= help2man
 SUFFIXES		= .x .8

@@ -7,6 +7,7 @@ sbin_PROGRAMS		= cluvirtd
 bin_PROGRAMS		= cluvirtadm
 lib_LTLIBRARIES		= libcluvirt.la
 include_HEADERS		= cluvirt.h
+noinst_HEADERS		= utils.h
 
 cluvirtd_SOURCES	= cluvirtd.c
 cluvirtd_CPPFLAGS	= $(xml_CFLAGS) $(virt_CFLAGS)
