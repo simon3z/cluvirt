@@ -8,22 +8,31 @@ distribute and modify it.
 
 Build Requirements
 ==================
-The build has been tested on CentOS 5.3 with:
+The build has been tested on CentOS 5.5 with:
 
-  openais-devel-0.80
-  cman-devel-2.0.98
-  libvirt-devel-0.6.4 (built from fedora sources)
+  openais-devel-0.80.6
+  cman-devel-2.0.115
+  libvirt-devel-0.6.3
+  libxml2-devel-2.6.26
 
 The sources should compile with previous libvirt versions down to 0.3.x.
 
 Build Instructions
 ==================
 
-Building from the repository (requires autoreconf):
+Building from the repository checkout (requires autoreconf):
 
   $ ./autogen.sh
   $ ./configure
   $ make
+
+Building the tarball:
+
+  $ make dist-gz
+
+Building the rpms (from the tarball):
+
+  $ rpmbuild -ta cluvirt-<version>.tar.gz
 
 Install Instructions
 ====================
@@ -34,7 +43,7 @@ Basic Usage
 ===========
 
 The cluvirtd daemon requires openais/corosync and libvirtd up and running.
-It has been tested on CentOS 5.3 with openais-0.80.3-22, libvirt-0.6.4
+It has been tested on CentOS 5.5 with openais-0.80.6-16, libvirt-0.6.3-33
 and qemu-kvm virtual machines.
 
 Run cluvirtd on each cluster node:
