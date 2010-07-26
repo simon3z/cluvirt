@@ -28,7 +28,7 @@ Building from the repository checkout (requires autoreconf):
 
 Building the tarball:
 
-  $ make dist-gz
+  $ make dist-gzip
 
 Building the rpms (from the tarball):
 
