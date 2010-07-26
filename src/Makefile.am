@@ -19,7 +19,7 @@ cluvirtadm_CPPFLAGS	= $(xml_CFLAGS) $(virt_CFLAGS)
 cluvirtadm_LDFLAGS	= $(xml_LIBS) $(virt_LIBS)
 cluvirtadm_LDADD	= libcluvirt.la
 
-libcluvirt_la_SOURCES	= status.c cluster.c member.c
+libcluvirt_la_SOURCES	= status.c cluster.c member.c utils.c
 libcluvirt_la_CPPFLAGS	= $(xml_CFLAGS) $(virt_CFLAGS)
 libcluvirt_la_LDFLAGS	= -version-info 0:1:0 $(xml_LIBS) $(virt_LIBS)
 

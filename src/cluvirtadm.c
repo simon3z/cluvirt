@@ -37,8 +37,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define CMDLINE_OPT_DEBUG       0x0004
 #define CMDLINE_OPT_XMLOUT      0x0008
 
-int utils_debug = 0;
-
 static cluster_node_head_t  cn_head = STAILQ_HEAD_INITIALIZER(cn_head);
 
 static int cmdline_flags;
@@ -46,8 +44,8 @@ static int group_members = -1, group_replies = 0; /* FIXME: something smarter */
 
 
 void cpg_deliver(cpg_handle_t handle,
-        struct cpg_name *group_name, uint32_t nodeid,
-        uint32_t pid, void *msg, int msg_len)
+        const struct cpg_name *group_name, uint32_t nodeid,
+        uint32_t pid, void *msg, size_t msg_len)
 {
     cluster_node_t      *n;
     
@@ -70,16 +68,15 @@ void cpg_deliver(cpg_handle_t handle,
     }
     
     n->status |= CLUSTER_NODE_JOINED;
-    domain_status_from_msg(&n->domain, msg + 1, msg_len - 1);
+    domain_status_from_msg(&n->domain, (char *) msg + 1, msg_len - 1);
 
     group_replies++;
 }
 
-void cpg_confchg(cpg_handle_t handle,
-        struct cpg_name *group_name,
-        struct cpg_address *member_list, int member_list_entries,
-        struct cpg_address *left_list, int left_list_entries,
-        struct cpg_address *joined_list, int joined_list_entries)
+void cpg_confchg(cpg_handle_t handle, const struct cpg_name *group_name,
+        const struct cpg_address *member_list, size_t member_list_entries,
+        const struct cpg_address *left_list, size_t left_list_entries,
+        const struct cpg_address *joined_list, size_t joined_list_entries)
 {
     if ((group_members < 0) || (group_members >= member_list_entries)) {
         group_members = member_list_entries - 1; /* FIXME: something smarter */

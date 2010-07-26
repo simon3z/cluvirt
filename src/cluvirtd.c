@@ -27,6 +27,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <errno.h>
 #include <error.h>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #include <cluvirt.h>
 
 #include "utils.h"
@@ -42,8 +45,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define CMDLINE_OPT_DAEMON      0x0008
 
 
-int utils_debug = 0;
-
 static domain_info_head_t  di_head = LIST_HEAD_INITIALIZER();
 
 static int cmdline_flags;
@@ -51,8 +52,8 @@ static char *libvirt_uri = 0;
 
 
 void cpg_deliver(cpg_handle_t handle,
-        struct cpg_name *group_name, uint32_t nodeid,
-        uint32_t pid, void *msg, int msg_len)
+        const struct cpg_name *group_name, uint32_t nodeid,
+        uint32_t pid, void *msg, size_t msg_len)
 {
     size_t      msg_size;
     char        reply_msg[MESSAGE_BUFFER_SIZE];
@@ -67,11 +68,10 @@ void cpg_deliver(cpg_handle_t handle,
     }
 }
 
-void cpg_confchg(cpg_handle_t handle,
-        struct cpg_name *group_name,
-        struct cpg_address *member_list, int member_list_entries,
-        struct cpg_address *left_list, int left_list_entries,
-        struct cpg_address *joined_list, int joined_list_entries)
+void cpg_confchg(cpg_handle_t handle, const struct cpg_name *group_name,
+        const struct cpg_address *member_list, size_t member_list_entries,
+        const struct cpg_address *left_list, size_t left_list_entries,
+        const struct cpg_address *joined_list, size_t joined_list_entries)
 {
     return;
 }
