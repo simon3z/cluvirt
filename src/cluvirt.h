@@ -84,7 +84,8 @@ typedef LIST_HEAD(_domain_info_head_t, _domain_info_t) domain_info_head_t;
 #define CLUSTER_NODE_JOINED     0x0004
 
 typedef struct _cluster_node_t {
-    int                             id;
+    uint32_t                        id;
+    uint32_t                        pid;
     char                            *host;
     int                             status;
     domain_info_head_t              domain;
@@ -92,6 +93,11 @@ typedef struct _cluster_node_t {
 } cluster_node_t;
 
 typedef STAILQ_HEAD(_cluster_node_head_t, _cluster_node_t) cluster_node_head_t;
+
+int group_init(void);
+int group_finish(void);
+int group_node_add(cluster_node_head_t *, uint32_t, uint32_t);
+int group_node_remove(cluster_node_head_t *, uint32_t, uint32_t);
 
 int member_init_list(cluster_node_head_t *);
 

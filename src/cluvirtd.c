@@ -46,6 +46,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 
 static domain_info_head_t  di_head = LIST_HEAD_INITIALIZER();
+static cluster_node_head_t cn_head = STAILQ_HEAD_INITIALIZER(cn_head);
 
 static int cmdline_flags;
 static char *libvirt_uri = 0;
@@ -73,7 +74,22 @@ void cpg_confchg(cpg_handle_t handle, const struct cpg_name *group_name,
         const struct cpg_address *left_list, size_t left_list_entries,
         const struct cpg_address *joined_list, size_t joined_list_entries)
 {
-    return;
+    size_t i;
+    
+    /* adding member nodes */
+    for (i = 0; i < member_list_entries; i++) {
+        group_node_add(&cn_head, member_list[i].nodeid, member_list[i].pid);
+    }
+    
+    /* adding joining nodes */
+    for (i = 0; i < joined_list_entries; i++) {
+        group_node_add(&cn_head, joined_list[i].nodeid, joined_list[i].pid);
+    }
+    
+    /* removing leaving nodes */
+    for (i = 0; i < left_list_entries; i++) {
+        group_node_remove(&cn_head, left_list[i].nodeid, left_list[i].pid);
+    }
 }
 
 void fork_daemon(void)
@@ -199,6 +215,8 @@ void main_loop(void)
         log_error("unable to initialize openais: %i", errno);
         exit(EXIT_FAILURE);
     }
+    
+    group_init();
     
     fd_max = fd_csync + 1;
     FD_ZERO(&readfds);
