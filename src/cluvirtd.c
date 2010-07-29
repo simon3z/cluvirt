@@ -45,8 +45,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define CMDLINE_OPT_DAEMON      0x0008
 
 
-static domain_info_head_t  di_head = LIST_HEAD_INITIALIZER();
+static domain_info_head_t  di_head = LIST_HEAD_INITIALIZER(di_head);
 static cluster_node_head_t cn_head = STAILQ_HEAD_INITIALIZER(cn_head);
+static clv_client_head_t   cl_head = LIST_HEAD_INITIALIZER(cl_head);
 
 static int cmdline_flags;
 static char *libvirt_uri = 0;
@@ -199,6 +200,17 @@ void cmdline_options(char argc, char *argv[])
     log_debug("libvirt_uri: %s", libvirt_uri);
 }
 
+int dispatch_request(clv_client_t *cl)
+{
+    char client_msg[256];
+    size_t client_msg_len;
+    
+    client_msg_len = read(cl->fd, client_msg, sizeof(client_msg));
+    
+    /* TODO: dispatching */
+    
+    return (client_msg_len > 0) ? 0 : -1;
+}
 
 static cpg_callbacks_t cpg_callbacks = {
     .cpg_deliver_fn = cpg_deliver, .cpg_confchg_fn = cpg_confchg
@@ -207,32 +219,77 @@ static cpg_callbacks_t cpg_callbacks = {
 
 void main_loop(void)
 {
-    int             fd_csync, fd_max;
-    fd_set          readfds;
+    int             fd_cpg, fd_clv;
+    fd_set          fds_active, fds_status;
     struct timeval  select_timeout;
     
-    if ((fd_csync = setup_cpg(&cpg_callbacks)) < 0) {
+    if ((fd_cpg = setup_cpg(&cpg_callbacks)) < 0) {
         log_error("unable to initialize openais: %i", errno);
         exit(EXIT_FAILURE);
     }
     
-    group_init();
+    if ((fd_clv = clv_init(CLV_SOCKET, CLV_INIT_SERVER)) < 0) {
+        log_error("unable to initialize cluvirt socket: %i", errno);
+        exit(EXIT_FAILURE);
+    }
     
-    fd_max = fd_csync + 1;
-    FD_ZERO(&readfds);
+    group_init();
+
+    FD_ZERO(&fds_active);
+    FD_SET(fd_cpg, &fds_active);
+    FD_SET(fd_clv, &fds_active);
     
     while (1) {
+        clv_client_t *cl, *j;
+        
         select_timeout.tv_sec   = 5;
         select_timeout.tv_usec  = 0;
         
-        FD_SET(fd_csync, &readfds);
-        
-        select(fd_max, &readfds, 0, 0, &select_timeout);
+        fds_status = fds_active;
+        select(FD_SETSIZE, &fds_status, 0, 0, &select_timeout);
 
         domain_status_update(libvirt_uri, &di_head);
         
-        if (FD_ISSET(fd_csync, &readfds)) {
+        if (FD_ISSET(fd_cpg, &fds_status)) { /* dispatching cpg messages */
             dispatch_message();
+        }
+        else if (FD_ISSET(fd_clv, &fds_status)) { /* accepting connections */
+            cl = malloc(sizeof(clv_client_t));
+            
+            cl->addrlen = sizeof(cl->address);
+            cl->fd = accept(
+                    fd_clv, (struct sockaddr *) &cl->address, &cl->addrlen);
+            
+            if (cl->fd < 0) {
+                free(cl);
+                log_error("unable to accept connection: %i", errno);
+            }
+            else {
+                LIST_INSERT_HEAD(&cl_head, cl, next);
+                FD_SET(cl->fd, &fds_active);
+                log_debug("client connection accepted: %p", cl);
+            }
+        }
+        else { /* dispatching requests */
+            for (cl = j = LIST_FIRST(&cl_head); j; cl = j) {
+                j = LIST_NEXT(cl, next);
+
+                if (FD_ISSET(cl->fd, &fds_status)) {
+                    int dispatch_status;
+                    
+                    dispatch_status = dispatch_request(cl);
+                    
+                    if (dispatch_status < 0) { /* closing connections */
+                        close(cl->fd);
+
+                        FD_CLR(cl->fd, &fds_active);
+                        LIST_REMOVE(cl, next);
+                        
+                        log_debug("client connection closed: %p", cl);
+                        free(cl);
+                    }
+                }
+            }
         }
     }
 }

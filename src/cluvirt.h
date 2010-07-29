@@ -28,6 +28,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include <sys/time.h>
 #include <sys/queue.h>
+#include <sys/un.h>
 
 #include <libvirt/libvirt.h>
 
@@ -93,6 +94,21 @@ typedef struct _cluster_node_t {
 } cluster_node_t;
 
 typedef STAILQ_HEAD(_cluster_node_head_t, _cluster_node_t) cluster_node_head_t;
+
+typedef struct _clv_client_t {
+    int                         fd;
+    struct sockaddr_un          address;
+    socklen_t                   addrlen;
+    LIST_ENTRY(_clv_client_t)   next;
+} clv_client_t;
+
+typedef LIST_HEAD(_clv_client_head_t, _clv_client_t) clv_client_head_t;
+
+#define CLV_INIT_CLIENT     0x00
+#define CLV_INIT_SERVER     0x01
+#define CLV_SOCKET          "/var/run/cluvirt.sock"
+
+int clv_init(const char *, int);
 
 int group_init(void);
 int group_finish(void);
