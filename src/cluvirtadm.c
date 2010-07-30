@@ -37,56 +37,46 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define CMDLINE_OPT_DEBUG       0x0004
 #define CMDLINE_OPT_XMLOUT      0x0008
 
+static int cmdline_flags;
 static cluster_node_head_t  cn_head = STAILQ_HEAD_INITIALIZER(cn_head);
 
-static int cmdline_flags;
-static int group_members = -1, group_replies = 0; /* FIXME: something smarter */
 
-
-void cpg_deliver(cpg_handle_t handle,
-        const struct cpg_name *group_name, uint32_t nodeid,
-        uint32_t pid, void *msg, size_t msg_len)
+void receive_domains(int fd_clv)
 {
-    cluster_node_t      *n;
+    size_t          msg_len;
+    static char     msg[8192];
+    clv_cmd_msg_t   asw_cmd;
+    cluster_node_t  *n;
     
-    if (((char*)msg)[0] != 0x00) return; /* FIXME: improve message type */
+    msg_len = read(fd_clv, msg, sizeof(msg));
     
-    log_debug("receiving a message: %i", msg_len);
-    
-    STAILQ_FOREACH(n, &cn_head, next) {
-        if (n->id == nodeid) break;
+    if (clv_rcv_command(&asw_cmd, msg, msg_len) == 0) {
+        log_error("malformed message, size: %lu", msg_len);
+        return;
     }
     
+    if (asw_cmd.cmd != CLV_CMD_ANSWER) return;
+    
+    log_debug("receiving a message: %i", msg_len);
+
+    STAILQ_FOREACH(n, &cn_head, next) {
+        if (n->id == asw_cmd.nodeid) break;
+    }
+
     if (n == 0) {
-        log_error("cluster node %i not found", nodeid);
+        log_error("cluster node %i not found", asw_cmd.nodeid);
         return;
     }
     
     if (n->status & CLUSTER_NODE_JOINED) {
-        log_error("double answer from node %i", nodeid);
+        log_error("double answer from node %i", asw_cmd.nodeid);
         return;
     }
     
     n->status |= CLUSTER_NODE_JOINED;
-    domain_status_from_msg(&n->domain, (char *) msg + 1, msg_len - 1);
-
-    group_replies++;
-}
-
-void cpg_confchg(cpg_handle_t handle, const struct cpg_name *group_name,
-        const struct cpg_address *member_list, size_t member_list_entries,
-        const struct cpg_address *left_list, size_t left_list_entries,
-        const struct cpg_address *joined_list, size_t joined_list_entries)
-{
-    if ((group_members < 0) || (group_members >= member_list_entries)) {
-        group_members = member_list_entries - 1; /* FIXME: something smarter */
-    }
-}
-
-void request_domain_info()
-{
-    char request_msg[] = { 0x01 }; /* FIXME: improve message type */
-    send_message(request_msg, sizeof(request_msg));
+    
+    domain_status_from_msg(&n->domain,
+        (char *) msg + sizeof(clv_cmd_msg_t), msg_len - sizeof(clv_cmd_msg_t));
 }
 
 char *uuid_to_string(unsigned char *uuid)
@@ -254,43 +244,34 @@ void print_status_xml(void)
     printf("</virtuals>\n</%s>\n", PROGRAM_NAME);
 }
 
-
-static cpg_callbacks_t cpg_callbacks = {
-    .cpg_deliver_fn = cpg_deliver, .cpg_confchg_fn = cpg_confchg
-};
-
 int main_loop(void)
 {
-    int             fd_csync, fd_max;
-    fd_set          readfds;
+    int             fd_clv;
+    fd_set          fds_active, fds_status;
     struct timeval  select_timeout;
+    cluster_node_t  *n;
  
-    if ((fd_csync = setup_cpg(&cpg_callbacks)) < 0) {
-        log_error("unable to initialize openais: %i", errno);
+    if ((fd_clv = clv_init(CLV_SOCKET, CLV_INIT_CLIENT)) < 0) {
+        log_error("unable to initialize cluvirt socket: %i", errno);
         exit(EXIT_FAILURE);
     }
-
+    
     member_init_list(&cn_head);
 
-    fd_max = fd_csync + 1;
-    FD_ZERO(&readfds);
+    FD_ZERO(&fds_active);
+    FD_SET(fd_clv, &fds_active);
     
-    request_domain_info();
-
-    while (1) {
+    STAILQ_FOREACH(n, &cn_head, next) {
         select_timeout.tv_sec   = 5;
         select_timeout.tv_usec  = 0;
         
-        FD_SET(fd_csync, &readfds);
+        clv_req_domains(fd_clv, n->id);
         
-        select(fd_max, &readfds, 0, 0, &select_timeout);
+        fds_status = fds_active;
+        select(FD_SETSIZE, &fds_status, 0, 0, &select_timeout);
         
-        if (FD_ISSET(fd_csync, &readfds)) {
-            dispatch_message();
-        }
-        
-        if (group_replies >= group_members) { /* FIXME: something smarter */
-            break;
+        if (FD_ISSET(fd_clv, &fds_status)) {
+            receive_domains(fd_clv);
         }
     }
 

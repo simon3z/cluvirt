@@ -73,3 +73,36 @@ exit_fail:
     return -1;
 }
 
+int clv_rcv_command(clv_cmd_msg_t *rcv_cmd, void *msg, size_t msg_len)
+{
+    clv_cmd_msg_t *tmp_cmd = msg;
+    
+    if (msg_len < sizeof(clv_cmd_msg_t)) {
+        log_error("malformed message, size: %lu", msg_len);
+        return 0;
+    }
+    
+    rcv_cmd->cmd            = be_swap32(tmp_cmd->cmd);
+    rcv_cmd->token          = be_swap32(tmp_cmd->token);
+    rcv_cmd->nodeid         = be_swap32(tmp_cmd->nodeid);
+    rcv_cmd->pid            = be_swap32(tmp_cmd->pid);
+    rcv_cmd->payload_size   = be_swap32(tmp_cmd->payload_size);
+    
+    return msg + sizeof(clv_cmd_msg_t);
+}
+
+int clv_req_domains(int fd, uint32_t nodeid)
+{
+    size_t msg_len;
+    clv_cmd_msg_t req_cmd;
+    
+    req_cmd.cmd     = be_swap32(CLV_CMD_REQUEST);
+    req_cmd.token   = be_swap32(0); /* FIXME: unused */
+    req_cmd.nodeid  = be_swap32(nodeid);
+    req_cmd.pid     = be_swap32(0); /* FIXME: unused */
+    
+    msg_len = write(fd, &req_cmd, sizeof(req_cmd));
+    
+    return (msg_len == 1) ? 0 : -1;
+}
+

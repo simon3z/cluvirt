@@ -57,16 +57,39 @@ void cpg_deliver(cpg_handle_t handle,
         const struct cpg_name *group_name, uint32_t nodeid,
         uint32_t pid, void *msg, size_t msg_len)
 {
-    size_t      msg_size;
-    char        reply_msg[MESSAGE_BUFFER_SIZE];
+    static char     asw_msg[MESSAGE_BUFFER_SIZE];
+    size_t          msg_size;
+    clv_cmd_msg_t   req_cmd, *asw_cmd;
+
+    if (clv_rcv_command(&req_cmd, msg, msg_len) == 0) {
+        log_error("malformed command from %u:%u", nodeid, pid);
+        return;
+    }
     
-    if (((char*)msg)[0] == 0x01) { /* FIXME: improve message type */
-        reply_msg[0] = 0x00;
+    if (req_cmd.cmd == CLV_CMD_REQUEST
+            && req_cmd.nodeid == get_local_nodeid()) { /* request is for us */
+        asw_cmd         = (clv_cmd_msg_t *) asw_msg;
+        
+        asw_cmd->cmd    = be_swap32(CLV_CMD_ANSWER);
+        asw_cmd->token  = 0; /* FIXME: unused */
+        asw_cmd->nodeid = be_swap32(get_local_nodeid());
+        asw_cmd->pid    = 0; /* FIXME: unused */
+
         msg_size = domain_status_to_msg(
-                        &di_head, &reply_msg[1], MESSAGE_BUFFER_SIZE - 1);
+                        &di_head, asw_msg + sizeof(clv_cmd_msg_t),
+                        MESSAGE_BUFFER_SIZE - sizeof(clv_cmd_msg_t));
+
         /* FIXME: better error handling */
         log_debug("sending domain info: %lu", msg_size);
-        send_message(reply_msg, msg_size + 1);
+        
+        send_message(asw_msg, msg_size + sizeof(clv_cmd_msg_t));
+    }
+    else if (req_cmd.cmd == CLV_CMD_ANSWER) { /* delivering, FIXME: token */
+        clv_client_t *cl;
+        
+        LIST_FOREACH(cl, &cl_head, next) {
+            write(cl->fd, msg, msg_len);
+        }
     }
 }
 
@@ -202,14 +225,37 @@ void cmdline_options(char argc, char *argv[])
 
 int dispatch_request(clv_client_t *cl)
 {
-    char client_msg[256];
-    size_t client_msg_len;
+    clv_cmd_msg_t   req_cmd, asw_cmd;
+    cluster_node_t  *n;
+    size_t          msg_len;
+    static char     msg[MESSAGE_BUFFER_SIZE]; /* FIXME: one buffer */
     
-    client_msg_len = read(cl->fd, client_msg, sizeof(client_msg));
+    if ((msg_len = read(cl->fd, msg, MESSAGE_BUFFER_SIZE)) == 0) {
+        return -1; /* client disconnection */
+    }
     
-    /* TODO: dispatching */
+    if (clv_rcv_command(&req_cmd, msg, msg_len) == 0) {
+        log_error("malformed command from client: %p", cl);
+        return 0; /* FIXME: better error handling */
+    }
+
+    STAILQ_FOREACH(n, &cn_head, next) { /* FIXME: performances */
+         if (n->id == req_cmd.nodeid) break;
+    }
     
-    return (client_msg_len > 0) ? 0 : -1;
+    if (n != 0) {
+        send_message(msg, msg_len); /* dispatch message to group */
+    }
+    else {
+        asw_cmd.cmd             = CLV_CMD_ERROR;
+        asw_cmd.token           = 0;
+        asw_cmd.nodeid          = be_swap32(get_local_nodeid());
+        asw_cmd.pid             = 0;
+        
+        write(cl->fd, &asw_cmd, sizeof(asw_cmd));
+    }
+    
+    return 0;
 }
 
 static cpg_callbacks_t cpg_callbacks = {

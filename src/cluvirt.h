@@ -63,7 +63,7 @@ typedef struct _domain_info_t {
     LIST_ENTRY(_domain_info_t)  next;
 } domain_info_t;
 
-/* little endian structure */
+/* big-endian structure */
 typedef struct __attribute__ ((__packed__)) _domain_info_msg_t {
     uint32_t                    id;
     uint32_t                    memory;
@@ -104,11 +104,27 @@ typedef struct _clv_client_t {
 
 typedef LIST_HEAD(_clv_client_head_t, _clv_client_t) clv_client_head_t;
 
+#define CLV_CMD_ERROR       0xffffffff
+#define CLV_CMD_REQUEST     0x00000001
+#define CLV_CMD_ANSWER      0xff000001
+
+/* big-endian structure */
+typedef struct __attribute__ ((__packed__)) _clv_cmd_msg_t {
+    uint32_t        cmd;
+    uint32_t        token;
+    uint32_t        nodeid;
+    uint32_t        pid;
+    uint32_t        __pad;
+    uint32_t        payload_size;
+    uint8_t         payload[0];
+} clv_cmd_msg_t;
+
 #define CLV_INIT_CLIENT     0x00
 #define CLV_INIT_SERVER     0x01
 #define CLV_SOCKET          "/var/run/cluvirt.sock"
 
 int clv_init(const char *, int);
+int clv_req_domains(int, uint32_t);
 
 int group_init(void);
 int group_finish(void);
