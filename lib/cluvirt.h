@@ -125,6 +125,7 @@ typedef struct __attribute__ ((__packed__)) _clv_cmd_msg_t {
 
 int clv_init(const char *, int);
 int clv_req_domains(int, uint32_t);
+void *clv_rcv_command(clv_cmd_msg_t *, void *, size_t);
 
 int group_init(void);
 int group_finish(void);

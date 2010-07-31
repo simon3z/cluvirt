@@ -24,5 +24,5 @@ Makefile.in
 /stamp-h1
 /man/cluvirtadm.8
 /man/cluvirtd.8
-/src/cluvirtadm
-/src/cluvirtd
+/client/cluvirtadm
+/daemon/cluvirtd

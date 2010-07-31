@@ -73,7 +73,7 @@ exit_fail:
     return -1;
 }
 
-int clv_rcv_command(clv_cmd_msg_t *rcv_cmd, void *msg, size_t msg_len)
+void *clv_rcv_command(clv_cmd_msg_t *rcv_cmd, void *msg, size_t msg_len)
 {
     clv_cmd_msg_t *tmp_cmd = msg;
     

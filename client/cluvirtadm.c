@@ -57,7 +57,7 @@ void receive_domains(int fd_clv)
     
     if (asw_cmd.cmd != CLV_CMD_ANSWER) return;
     
-    log_debug("receiving a message: %i", msg_len);
+    log_debug("receiving a message: %lu", msg_len);
 
     STAILQ_FOREACH(n, &cn_head, next) {
         if (n->id == asw_cmd.nodeid) break;
@@ -206,7 +206,7 @@ void print_status_txt(void)
             vm_state = (d->state < sizeof(state_name)) ?
                             state_name[d->state] : state_name[0];
 
-            printf("%4i  %-20.20s %-24.24s  %c %6i %6i %4i.%1.1i\n",
+            printf("%4i  %-20.20s %-24.24s  %c %6i %6lu %4i.%1.1i\n",
                     d->id, d->name, n->host, vm_state, d->vncport,
                     d->memory / 1024, d->usage / 10, d->usage % 10);
         }
@@ -235,7 +235,7 @@ void print_status_xml(void)
         LIST_FOREACH(d, &n->domain, next) {
             printf("  <vm id=\"%i\" uuid=\"%s\"\n"
                    "      name=\"%s\" node=\"%s\" state=\"%i\" vncport=\"%i\""
-                   " memory=\"%i\" usage=\"%i\"/>\n",
+                   " memory=\"%lu\" usage=\"%i\"/>\n",
                         d->id, uuid_to_string(d->uuid), d->name,
                         n->host, d->state, d->vncport, d->memory, d->usage);
         }
