@@ -27,8 +27,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <libcman.h>
 
 #include <cluvirt.h>
-
-#include "utils.h"
+#include <utils.h>
 
 
 #define PROGRAM_NAME            "cluvirtadm"
@@ -40,6 +39,58 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 static int cmdline_flags;
 static cluster_node_head_t  cn_head = STAILQ_HEAD_INITIALIZER(cn_head);
 
+
+int member_init_list(void)
+{
+    int             node_count, i;
+    cman_handle_t   handle;
+    cman_node_t     *cman_nodes, local_node;
+    
+    if ((handle = cman_init(0)) == 0) {
+        log_error("unable to initialize cman: %i", errno);
+        return -1;
+    }
+    
+    if ((node_count = cman_get_node_count(handle)) < 0) {
+        log_error("unable to count cman nodes: %i", errno);
+        return -1;
+    }
+    
+    cman_nodes = calloc((size_t) node_count, sizeof(cman_node_t));
+    cman_get_nodes(handle, node_count, &node_count, cman_nodes);
+    
+    if (cman_get_node(handle, CMAN_NODEID_US, &local_node) != 0) {
+        log_error("unable to get local node: %i", errno);
+        return -1;
+    }
+    
+    for (i = 0; i < node_count; i++) {
+        cluster_node_t  *n;
+        
+        n = malloc(sizeof(cluster_node_t));
+        STAILQ_INSERT_TAIL(&cn_head, n, next);
+
+        n->id           = (uint32_t) cman_nodes[i].cn_nodeid;
+        n->host         = strdup(cman_nodes[i].cn_name);
+        n->status       = 0;
+        
+        if (cman_nodes[i].cn_member != 0) {
+            n->status   |= CLUSTER_NODE_ONLINE;
+        }
+        
+        if (cman_nodes[i].cn_nodeid == local_node.cn_nodeid) {
+            n->status   |= CLUSTER_NODE_LOCAL;
+        }
+        
+        LIST_INIT(&n->domain);
+    }
+    
+    free(cman_nodes);
+    
+    cman_finish(handle);
+    
+    return 0;
+}
 
 void receive_domains(int fd_clv)
 {
@@ -268,7 +319,7 @@ int main_loop(void)
         exit(EXIT_FAILURE);
     }
     
-    member_init_list(&cn_head);
+    member_init_list();
 
     FD_ZERO(&fds_active);
     FD_SET(fd_clv, &fds_active);
