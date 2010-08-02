@@ -28,7 +28,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <libxml/parser.h>
 #include <libxml/xpath.h>
 
-#include <cluvirt.h>
+#include <domain.h>
 #include <utils.h>
 
 
@@ -41,7 +41,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 static uint16_t _libvirt_vncport(virDomain *);
 
 
-int domain_status_update(char *uri, domain_info_head_t *di_head)
+int domain_update_status(char *uri, domain_info_head_t *di_head)
 {
     static int      id[LIBVIRT_ID_BUFFER_SIZE];
     int             n, i;

@@ -31,6 +31,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <sys/stat.h>
 
 #include <group.h>
+#include <domain.h>
 #include <utils.h>
 
 
@@ -74,7 +75,7 @@ void cpg_deliver(cpg_handle_t handle,
         asw_cmd->nodeid = be_swap32(get_local_nodeid());
         asw_cmd->pid    = 0; /* FIXME: unused */
 
-        if ((msg_size = domain_status_to_msg(
+        if ((msg_size = clv_domain_to_msg(
                         &di_head, asw_msg + sizeof(clv_cmd_msg_t),
                         MESSAGE_BUFFER_SIZE - sizeof(clv_cmd_msg_t))) < 0) {
             log_error("unable to prepare domain status message");
@@ -302,7 +303,7 @@ void main_loop(void)
         fds_status = fds_active;
         select(FD_SETSIZE, &fds_status, 0, 0, &select_timeout);
 
-        domain_status_update(libvirt_uri, &di_head);
+        domain_update_status(libvirt_uri, &di_head);
         
         if (FD_ISSET(fd_cpg, &fds_status)) { /* dispatching cpg messages */
             dispatch_message();

@@ -29,7 +29,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <utils.h>
 
 
-ssize_t domain_status_to_msg(
+ssize_t clv_domain_to_msg(
         domain_info_head_t *di_head, char *msg, size_t max_size)
 {
     domain_info_t       *d;
@@ -69,7 +69,7 @@ ssize_t domain_status_to_msg(
     return (ssize_t) p_offset;
 }
 
-ssize_t domain_status_from_msg(
+ssize_t clv_domain_from_msg(
         domain_info_head_t *di_head, char *msg, size_t msg_size)
 {
     domain_info_t       *d;

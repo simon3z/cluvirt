@@ -127,9 +127,7 @@ int clv_init(const char *, int);
 int clv_req_domains(int, uint32_t);
 void *clv_rcv_command(clv_cmd_msg_t *, void *, size_t);
 
-int domain_status_update(char *, domain_info_head_t *);
-ssize_t domain_status_to_msg(domain_info_head_t *, char *, size_t);
-ssize_t domain_status_from_msg(domain_info_head_t *, char *, size_t);
-
+ssize_t clv_domain_to_msg(domain_info_head_t *, char *, size_t);
+ssize_t clv_domain_from_msg(domain_info_head_t *, char *, size_t);
 
 #endif

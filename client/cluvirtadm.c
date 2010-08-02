@@ -135,7 +135,7 @@ void receive_domains(int fd_clv)
     
     n->status |= CLUSTER_NODE_JOINED;
     
-    if (domain_status_from_msg(&n->domain,
+    if (clv_domain_from_msg(&n->domain,
             (char *) msg + sizeof(clv_cmd_msg_t),
             (size_t) msg_len - sizeof(clv_cmd_msg_t)) < 0) {
         log_error("bad domain status, output might be incomplete");

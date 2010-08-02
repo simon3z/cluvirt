@@ -1,5 +1,5 @@
 /*
-cluvirtadm - client for cluvirtd daemons.
+cluvirtd - daemon to multicast libvirt info to openais members.
 Copyright (C) 2009  Federico Simoncelli <federico.simoncelli@nethesis.it>
 
 This program is free software; you can redistribute it and/or
@@ -26,9 +26,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include <libcman.h>
 
-#include <cluvirt.h>
-
-#include "utils.h"
+#include <group.h>
+#include <utils.h>
 
 
 static cman_handle_t    cman_handle = 0;
