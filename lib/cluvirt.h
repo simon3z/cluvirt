@@ -127,11 +127,6 @@ int clv_init(const char *, int);
 int clv_req_domains(int, uint32_t);
 void *clv_rcv_command(clv_cmd_msg_t *, void *, size_t);
 
-int group_init(void);
-int group_finish(void);
-int group_node_add(cluster_node_head_t *, uint32_t, uint32_t);
-int group_node_remove(cluster_node_head_t *, uint32_t, uint32_t);
-
 int member_init_list(cluster_node_head_t *);
 
 int domain_status_update(char *, domain_info_head_t *);
