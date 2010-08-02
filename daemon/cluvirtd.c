@@ -17,6 +17,10 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -32,7 +36,18 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include <group.h>
 #include <domain.h>
+#include <cluster.h>
 #include <utils.h>
+
+
+typedef struct _clv_client_t {
+    int                         fd;
+    struct sockaddr_un          address;
+    socklen_t                   addrlen;
+    LIST_ENTRY(_clv_client_t)   next;
+} clv_client_t;
+
+typedef LIST_HEAD(_clv_client_head_t, _clv_client_t) clv_client_head_t;
 
 
 #define MESSAGE_BUFFER_SIZE     8192
@@ -270,7 +285,6 @@ int dispatch_request(clv_client_t *cl)
 static cpg_callbacks_t cpg_callbacks = {
     .cpg_deliver_fn = cpg_deliver, .cpg_confchg_fn = cpg_confchg
 };
-
 
 void main_loop(void)
 {

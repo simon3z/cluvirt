@@ -90,10 +90,6 @@ int group_node_add(cluster_node_head_t *cn_head, uint32_t id, uint32_t pid)
         n->host     = strdup(n_name);
     }
     
-    if (id == get_local_nodeid()) {
-        n->status  |= CLUSTER_NODE_LOCAL;
-    }
-    
     LIST_INIT(&n->domain);
 
     log_debug("adding node '%s', id: %u, pid: %u", n->host, n->id, n->pid);

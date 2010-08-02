@@ -20,9 +20,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #ifndef __CLUVIRT_H_
 #define __CLUVIRT_H_
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
 
 #include <stdint.h>
 
@@ -30,24 +27,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <sys/queue.h>
 #include <sys/un.h>
 
-#include <libvirt/libvirt.h>
-
-
-#ifdef HAVE_COROSYNC_CPG_H
-#include <corosync/cpg.h>
-#else
-#include <openais/cpg.h>
-#endif
-
-
-#define CLUVIRT_GROUP_NAME      "cluvirtd"
-
-
-int setup_cpg(cpg_callbacks_t *);
-void dispatch_message(void);
-int send_message(void *, size_t);
-unsigned int get_local_nodeid(void);
-
+#include <libvirt/libvirt.h> /* VIR_UUID_BUFLEN */
 
 typedef struct _domain_info_t {
     int                         id;
@@ -94,15 +74,6 @@ typedef struct _cluster_node_t {
 } cluster_node_t;
 
 typedef STAILQ_HEAD(_cluster_node_head_t, _cluster_node_t) cluster_node_head_t;
-
-typedef struct _clv_client_t {
-    int                         fd;
-    struct sockaddr_un          address;
-    socklen_t                   addrlen;
-    LIST_ENTRY(_clv_client_t)   next;
-} clv_client_t;
-
-typedef LIST_HEAD(_clv_client_head_t, _clv_client_t) clv_client_head_t;
 
 #define CLV_CMD_ERROR       0xffffffff
 #define CLV_CMD_REQUEST     0x00000001

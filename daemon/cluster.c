@@ -17,6 +17,10 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -25,9 +29,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <errno.h>
 #include <error.h>
 
-#include <cluvirt.h>
-
-#include "utils.h"
+#include <cluster.h>
+#include <utils.h>
 
 
 static cpg_handle_t daemon_handle;

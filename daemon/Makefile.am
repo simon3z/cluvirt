@@ -4,6 +4,7 @@ MAINTAINERCLEANFILES	= Makefile.in
 AM_CPPFLAGS		= -Wall -Wshadow -Wconversion -O2
 
 sbin_PROGRAMS		= cluvirtd
+noinst_HEADERS		= cluster.h domain.h group.h
 
 cluvirtd_SOURCES	= cluvirtd.c cluster.c group.c domain.c
 cluvirtd_CPPFLAGS	= $(AM_CPPFLAGS) -I$(top_srcdir)/utils -I$(top_srcdir)/lib \
