@@ -104,7 +104,35 @@ void *clv_rcv_command(clv_cmd_msg_t *rcv_cmd, void *msg, size_t msg_len)
     return msg + sizeof(clv_cmd_msg_t);
 }
 
-int clv_req_domains(int fd, uint32_t nodeid)
+ssize_t clv_wait_reply(clv_handle_t *clvh)
+{
+    int fd_max;
+    fd_set fds_read;
+    struct timeval read_to;
+    
+    fd_max  = clvh->fd + 1;
+    
+    read_to.tv_sec  = clvh->to_sec;
+    read_to.tv_usec = clvh->to_usec;
+
+    FD_ZERO(&fds_read);
+    FD_SET(clvh->fd, &fds_read);
+
+    if (select(fd_max, &fds_read, 0, 0, &read_to) < 0) {
+        return -1;
+    }
+    
+    log_debug("timeout: %lu %lu", read_to.tv_sec, read_to.tv_usec);
+    
+    if (FD_ISSET(clvh->fd, &fds_read)) {
+        return read(clvh->fd, clvh->reply, clvh->reply_len);
+    }
+    
+    return 0;
+}
+
+int clv_req_domains(
+        clv_handle_t *clvh, uint32_t nodeid, domain_info_head_t *di_head)
 {
     ssize_t msg_len;
     clv_cmd_msg_t req_cmd;
@@ -114,8 +142,30 @@ int clv_req_domains(int fd, uint32_t nodeid)
     req_cmd.nodeid  = be_swap32(nodeid);
     req_cmd.pid     = be_swap32(0); /* FIXME: unused */
     
-    msg_len = write(fd, &req_cmd, sizeof(req_cmd));
+    msg_len = write(clvh->fd, &req_cmd, sizeof(req_cmd)); /* sending request */
     
-    return (msg_len == 1) ? 0 : -1;
+    if (msg_len != sizeof(req_cmd)) {
+        return -1; /* error sending request */
+    };
+    
+    if ((msg_len = clv_wait_reply(clvh)) > 0) { /* waiting response */
+        clv_cmd_msg_t   asw_cmd;
+        
+        if (clv_rcv_command(&asw_cmd, clvh->reply, (size_t) msg_len) == 0) {
+            return -1;
+        }
+        
+        if (asw_cmd.cmd != CLV_CMD_ANSWER || asw_cmd.nodeid != nodeid) {
+            return -1; /* FIXME: improve error handling */
+        }
+        
+        if (clv_domain_from_msg(di_head,
+                (char *) clvh->reply + sizeof(clv_cmd_msg_t),
+                (size_t) msg_len - sizeof(clv_cmd_msg_t)) < 0) {
+            return -1;
+        }
+    }
+    
+    return 0;
 }
 

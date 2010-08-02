@@ -101,7 +101,7 @@ typedef struct _clv_handle_t {
 
 int clv_init(clv_handle_t *, const char *, int);
 int clv_get_fd(clv_handle_t *);
-int clv_req_domains(int, uint32_t);
+int clv_req_domains(clv_handle_t *, uint32_t, domain_info_head_t *);
 void *clv_rcv_command(clv_cmd_msg_t *, void *, size_t);
 
 ssize_t clv_domain_to_msg(domain_info_head_t *, char *, size_t);

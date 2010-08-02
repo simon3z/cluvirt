@@ -45,7 +45,7 @@ static int cmdline_flags;
 static cluster_node_head_t  cn_head = STAILQ_HEAD_INITIALIZER(cn_head);
 
 
-int member_init_list(void)
+int member_init_list()
 {
     int             node_count, i;
     cman_handle_t   handle;
@@ -95,56 +95,6 @@ int member_init_list(void)
     cman_finish(handle);
     
     return 0;
-}
-
-void receive_domains(int fd_clv)
-{
-    ssize_t         msg_len;
-    static char     msg[8192];
-    clv_cmd_msg_t   asw_cmd;
-    cluster_node_t  *n;
-    
-    msg_len = read(fd_clv, msg, sizeof(msg));
-
-    if (msg_len == 0) {
-        log_error("server connection closed");
-        return;
-    }
-    else if (msg_len < 0) {
-        log_error("error reading from server: %i", errno);
-        return;
-    }
-
-    if (clv_rcv_command(&asw_cmd, msg, (size_t) msg_len) == 0) {
-        log_error("malformed message, size: %lu", msg_len);
-        return;
-    }
-    
-    if (asw_cmd.cmd != CLV_CMD_ANSWER) return;
-    
-    log_debug("receiving a message: %lu", msg_len);
-
-    STAILQ_FOREACH(n, &cn_head, next) {
-        if (n->id == asw_cmd.nodeid) break;
-    }
-
-    if (n == 0) {
-        log_error("cluster node %i not found", asw_cmd.nodeid);
-        return;
-    }
-    
-    if (n->status & CLUSTER_NODE_JOINED) {
-        log_error("double answer from node %i", asw_cmd.nodeid);
-        return;
-    }
-    
-    n->status |= CLUSTER_NODE_JOINED;
-    
-    if (clv_domain_from_msg(&n->domain,
-            (char *) msg + sizeof(clv_cmd_msg_t),
-            (size_t) msg_len - sizeof(clv_cmd_msg_t)) < 0) {
-        log_error("bad domain status, output might be incomplete");
-    }
 }
 
 char *uuid_to_string(unsigned char *uuid)
@@ -314,35 +264,19 @@ void print_status_xml(void)
 
 int main_loop(void)
 {
-    int             fd_clv;
-    fd_set          fds_active, fds_status;
-    struct timeval  select_timeout;
-    cluster_node_t  *n;
     clv_handle_t    clvh;
+    cluster_node_t  *n;
+    
+    member_init_list();
  
     if (clv_init(&clvh, CLV_SOCKET, CLV_INIT_CLIENT) != 0) {
         log_error("unable to initialize cluvirt socket: %i", errno);
         exit(EXIT_FAILURE);
     }
     
-    fd_clv = clv_get_fd(&clvh);
-    
-    member_init_list();
-
-    FD_ZERO(&fds_active);
-    FD_SET(fd_clv, &fds_active);
-    
     STAILQ_FOREACH(n, &cn_head, next) {
-        select_timeout.tv_sec   = 5;
-        select_timeout.tv_usec  = 0;
-        
-        clv_req_domains(fd_clv, n->id);
-        
-        fds_status = fds_active;
-        select(FD_SETSIZE, &fds_status, 0, 0, &select_timeout);
-        
-        if (FD_ISSET(fd_clv, &fds_status)) {
-            receive_domains(fd_clv);
+        if (clv_req_domains(&clvh, n->id, &n->domain) == 0) {
+            n->status |= CLUSTER_NODE_JOINED;
         }
     }
 
