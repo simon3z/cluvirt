@@ -31,6 +31,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <errno.h>
 #include <error.h>
 
+#include <sys/un.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -291,16 +292,19 @@ void main_loop(void)
     int             fd_cpg, fd_clv;
     fd_set          fds_active, fds_status;
     struct timeval  select_timeout;
+    clv_handle_t    clvh;
     
     if ((fd_cpg = setup_cpg(&cpg_callbacks)) < 0) {
         log_error("unable to initialize openais: %i", errno);
         exit(EXIT_FAILURE);
     }
     
-    if ((fd_clv = clv_init(CLV_SOCKET, CLV_INIT_SERVER)) < 0) {
+    if (clv_init(&clvh, CLV_SOCKET, CLV_INIT_SERVER) != 0) {
         log_error("unable to initialize cluvirt socket: %i", errno);
         exit(EXIT_FAILURE);
     }
+    
+    fd_clv = clv_get_fd(&clvh);
     
     group_init();
 

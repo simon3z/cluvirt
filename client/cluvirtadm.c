@@ -23,6 +23,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <getopt.h>
 #include <errno.h>
@@ -317,11 +318,14 @@ int main_loop(void)
     fd_set          fds_active, fds_status;
     struct timeval  select_timeout;
     cluster_node_t  *n;
+    clv_handle_t    clvh;
  
-    if ((fd_clv = clv_init(CLV_SOCKET, CLV_INIT_CLIENT)) < 0) {
+    if (clv_init(&clvh, CLV_SOCKET, CLV_INIT_CLIENT) != 0) {
         log_error("unable to initialize cluvirt socket: %i", errno);
         exit(EXIT_FAILURE);
     }
+    
+    fd_clv = clv_get_fd(&clvh);
     
     member_init_list();
 

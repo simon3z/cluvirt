@@ -22,11 +22,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 
 #include <stdint.h>
-
 #include <sys/time.h>
 #include <sys/queue.h>
-#include <sys/un.h>
-
 #include <libvirt/libvirt.h> /* VIR_UUID_BUFLEN */
 
 typedef struct _domain_info_t {
@@ -94,7 +91,16 @@ typedef struct __attribute__ ((__packed__)) _clv_cmd_msg_t {
 #define CLV_INIT_SERVER     0x01
 #define CLV_SOCKET          "/var/run/cluvirt.sock"
 
-int clv_init(const char *, int);
+typedef struct _clv_handle_t {
+    int             fd;
+    long            to_sec;
+    long            to_usec;
+    void            *reply;
+    size_t          reply_len;
+} clv_handle_t;
+
+int clv_init(clv_handle_t *, const char *, int);
+int clv_get_fd(clv_handle_t *);
 int clv_req_domains(int, uint32_t);
 void *clv_rcv_command(clv_cmd_msg_t *, void *, size_t);
 

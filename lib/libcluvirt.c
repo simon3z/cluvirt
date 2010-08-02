@@ -26,11 +26,13 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <sys/un.h>
 
 #include <cluvirt.h>
+#include <utils.h>
 
-#include "utils.h"
+
+#define CLV_BUFFER_DEFSIZE      8192
 
 
-int clv_init(const char *filename, int mode)
+int clv_init(clv_handle_t *clvh, const char *filename, int mode)
 {
     int sock;
     struct sockaddr_un name;
@@ -66,11 +68,22 @@ int clv_init(const char *filename, int mode)
         }
     }
     
-    return sock;
+    clvh->fd        = sock;
+    clvh->to_sec    = 5;
+    clvh->to_usec   = 0;
+    clvh->reply     = malloc(CLV_BUFFER_DEFSIZE);
+    clvh->reply_len = CLV_BUFFER_DEFSIZE;
+    
+    return 0;
     
 exit_fail:
     close(sock);
     return -1;
+}
+
+int clv_get_fd(clv_handle_t *clvh)
+{
+    return clvh->fd;
 }
 
 void *clv_rcv_command(clv_cmd_msg_t *rcv_cmd, void *msg, size_t msg_len)
