@@ -96,7 +96,7 @@ void dispatch_message(void)
     }
 }
 
-int send_message(void *buf, int len)
+int send_message(void *buf, size_t len)
 {
     struct iovec iov;
     cpg_error_t err;

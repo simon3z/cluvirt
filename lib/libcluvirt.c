@@ -93,7 +93,7 @@ void *clv_rcv_command(clv_cmd_msg_t *rcv_cmd, void *msg, size_t msg_len)
 
 int clv_req_domains(int fd, uint32_t nodeid)
 {
-    size_t msg_len;
+    ssize_t msg_len;
     clv_cmd_msg_t req_cmd;
     
     req_cmd.cmd     = be_swap32(CLV_CMD_REQUEST);

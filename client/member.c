@@ -47,7 +47,7 @@ int member_init_list(cluster_node_head_t *cn_head)
         return -1;
     }
     
-    cman_nodes = calloc(node_count, sizeof(cman_node_t));
+    cman_nodes = calloc((size_t) node_count, sizeof(cman_node_t));
     cman_get_nodes(handle, node_count, &node_count, cman_nodes);
     
     if (cman_get_node(handle, CMAN_NODEID_US, &local_node) != 0) {
@@ -61,7 +61,7 @@ int member_init_list(cluster_node_head_t *cn_head)
         n = malloc(sizeof(cluster_node_t));
         STAILQ_INSERT_TAIL(cn_head, n, next);
 
-        n->id           = cman_nodes[i].cn_nodeid;
+        n->id           = (uint32_t) cman_nodes[i].cn_nodeid;
         n->host         = strdup(cman_nodes[i].cn_name);
         n->status       = 0;
         

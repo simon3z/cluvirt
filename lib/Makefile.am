@@ -1,7 +1,7 @@
 
 MAINTAINERCLEANFILES	= Makefile.in
 
-AM_CPPFLAGS		= -Wall -Werror -Wshadow -O2
+AM_CPPFLAGS		= -Wall -Wconversion -Wshadow -O2
 
 lib_LTLIBRARIES		= libcluvirt.la
 include_HEADERS		= cluvirt.h

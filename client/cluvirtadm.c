@@ -43,14 +43,23 @@ static cluster_node_head_t  cn_head = STAILQ_HEAD_INITIALIZER(cn_head);
 
 void receive_domains(int fd_clv)
 {
-    size_t          msg_len;
+    ssize_t         msg_len;
     static char     msg[8192];
     clv_cmd_msg_t   asw_cmd;
     cluster_node_t  *n;
     
     msg_len = read(fd_clv, msg, sizeof(msg));
-    
-    if (clv_rcv_command(&asw_cmd, msg, msg_len) == 0) {
+
+    if (msg_len == 0) {
+        log_error("server connection closed");
+        return;
+    }
+    else if (msg_len < 0) {
+        log_error("error reading from server: %i", errno);
+        return;
+    }
+
+    if (clv_rcv_command(&asw_cmd, msg, (size_t) msg_len) == 0) {
         log_error("malformed message, size: %lu", msg_len);
         return;
     }
@@ -75,8 +84,11 @@ void receive_domains(int fd_clv)
     
     n->status |= CLUSTER_NODE_JOINED;
     
-    domain_status_from_msg(&n->domain,
-        (char *) msg + sizeof(clv_cmd_msg_t), msg_len - sizeof(clv_cmd_msg_t));
+    if (domain_status_from_msg(&n->domain,
+            (char *) msg + sizeof(clv_cmd_msg_t),
+            (size_t) msg_len - sizeof(clv_cmd_msg_t)) < 0) {
+        log_error("bad domain status, output might be incomplete");
+    }
 }
 
 char *uuid_to_string(unsigned char *uuid)
@@ -120,7 +132,7 @@ void print_usage()
     );
 }
 
-void cmdline_options(char argc, char *argv[])
+void cmdline_options(int argc, char *argv[])
 {
     int c, option_index = 0;
     static struct option long_options[] = {
@@ -203,8 +215,8 @@ void print_status_txt(void)
 
     STAILQ_FOREACH(n, &cn_head, next) {
         LIST_FOREACH(d, &n->domain, next) {
-            vm_state = (d->state < sizeof(state_name)) ?
-                            state_name[d->state] : state_name[0];
+            vm_state = (char) ((d->state < sizeof(state_name)) ?
+                                state_name[d->state] : state_name[0]);
 
             printf("%4i  %-20.20s %-24.24s  %c %6i %6lu %4i.%1.1i\n",
                     d->id, d->name, n->host, vm_state, d->vncport,

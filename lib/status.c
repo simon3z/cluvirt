@@ -39,12 +39,13 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define LIBVIRT_ID_BUFFER_SIZE  64
 
 
-static int _libvirt_vncport(virDomain *);
+static uint16_t _libvirt_vncport(virDomain *);
 
 
 int domain_status_update(char *uri, domain_info_head_t *di_head)
 {
-    int             id[LIBVIRT_ID_BUFFER_SIZE], n, i;
+    static int      id[LIBVIRT_ID_BUFFER_SIZE];
+    int             n, i;
     virConnect      *lvh;
     domain_info_t   *d, *j;
     struct timeval  time_now;
@@ -77,7 +78,7 @@ int domain_status_update(char *uri, domain_info_head_t *di_head)
     for (i = 0; i < n; i++) {
         virDomain           *lv_domain;
         virDomainInfo       lv_info;
-        unsigned long long  time_delta;
+        time_t              time_delta;
         
         if (id[i] == 0) { /* skipping Domain-0 for xen hypervisor */
             continue;
@@ -133,13 +134,14 @@ int domain_status_update(char *uri, domain_info_head_t *di_head)
         /* these values will be updated at each call */
         d->state    = lv_info.state;
         
-        time_delta  = ((time_now.tv_sec - d->update.tv_sec) * 1000000ull) +
+        time_delta  = ((time_now.tv_sec - d->update.tv_sec) * 1000000ll) +
                         (time_now.tv_usec - d->update.tv_usec);
         
         /* update cpu utilization if time_delta > 1 second */
-        if (time_delta > 1000000ull) { /* > 0 to avoid divide-by-zero */
-            d->usage        = ((lv_info.cpuTime - d->cputime) /
-                                    lv_info.nrVirtCpu) / (time_delta);
+        if (time_delta > 1000000ll) { /* > 0 to avoid divide-by-zero */
+            d->usage        = (unsigned short) 
+                                  ((time_t) (lv_info.cpuTime - d->cputime)
+                                          / (lv_info.nrVirtCpu * time_delta));
 
             d->cputime      = lv_info.cpuTime;
             memcpy(&d->update, &time_now, sizeof(d->update));
@@ -173,17 +175,17 @@ clean_exit1:
     return 0;
 }
 
-static int _libvirt_vncport(virDomain *domain)
+static uint16_t _libvirt_vncport(virDomain *domain)
 {
     char                *doc;
     xmlDoc              *xml;
     xmlXPathContext     *ctxt;
     xmlXPathObject      *obj;
-    int                 port = -1;
+    uint16_t            port = 0;
     
     if ((doc = virDomainGetXMLDesc(domain, VIR_DOMAIN_XML_SECURE)) == 0) {
         log_error("failed to dump xml: %i", errno);
-        return -1;
+        return 0;
     }
 
     if ((xml = xmlReadDoc((const xmlChar *) doc, "domain.xml", NULL,
@@ -203,7 +205,7 @@ static int _libvirt_vncport(virDomain *domain)
         goto clean_exit3;
     }
     
-    port = atoi((char*) obj->stringval);
+    port = (uint16_t) atoi((char*) obj->stringval);
 
     xmlXPathFreeObject(obj);
 
@@ -219,7 +221,7 @@ clean_exit1:
     return port;
 }
 
-int domain_status_to_msg(
+ssize_t domain_status_to_msg(
         domain_info_head_t *di_head, char *msg, size_t max_size)
 {
     domain_info_t       *d;
@@ -239,14 +241,15 @@ int domain_status_to_msg(
         
         m = (domain_info_msg_t*) (msg + p_offset);
         
-        m->id               = be_swap32(d->id);
-        m->memory           = be_swap32(d->memory);
+        m->id               = be_swap32((uint32_t) d->id);
+        m->memory           = be_swap32((uint32_t) d->memory);
         m->cputime          = be_swap64(d->cputime);
         m->usage            = be_swap16(d->usage);
         m->ncpu             = be_swap16(d->ncpu);
         m->vncport          = be_swap16(d->vncport);
+
         m->state            = d->state;
-        m->payload_size     = be_swap32(name_size);
+        m->payload_size     = be_swap32((uint32_t) name_size);
 
         memcpy(m->uuid, d->uuid, sizeof(m->uuid));
         memcpy(m->payload, d->name, name_size);
@@ -255,10 +258,10 @@ int domain_status_to_msg(
         p_offset            = n_offset;
     }
     
-    return p_offset;
+    return (ssize_t) p_offset;
 }
 
-int domain_status_from_msg(
+ssize_t domain_status_from_msg(
         domain_info_head_t *di_head, char *msg, size_t msg_size)
 {
     domain_info_t       *d;
@@ -296,6 +299,6 @@ int domain_status_from_msg(
         p_offset        = n_offset;
     }
 
-    return p_offset;
+    return (ssize_t) p_offset;
 }
 

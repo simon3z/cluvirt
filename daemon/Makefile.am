@@ -1,7 +1,7 @@
 
 MAINTAINERCLEANFILES	= Makefile.in
 
-AM_CPPFLAGS		= -Wall -Werror -Wshadow -O2
+AM_CPPFLAGS		= -Wall -Wshadow -Wconversion -O2
 
 sbin_PROGRAMS		= cluvirtd
 

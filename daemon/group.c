@@ -81,7 +81,7 @@ int group_node_add(cluster_node_head_t *cn_head, uint32_t id, uint32_t pid)
         
         memset(&node_info, 0, sizeof(node_info));
         
-        if (cman_get_node(cman_handle, n->id, &node_info) == 0) {
+        if (cman_get_node(cman_handle, (int) n->id, &node_info) == 0) {
             n->host = strdup(node_info.cn_name);
         }
     }

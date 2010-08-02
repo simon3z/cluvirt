@@ -58,7 +58,7 @@ void cpg_deliver(cpg_handle_t handle,
         uint32_t pid, void *msg, size_t msg_len)
 {
     static char     asw_msg[MESSAGE_BUFFER_SIZE];
-    size_t          msg_size;
+    ssize_t         msg_size;
     clv_cmd_msg_t   req_cmd, *asw_cmd;
 
     if (clv_rcv_command(&req_cmd, msg, msg_len) == 0) {
@@ -75,14 +75,17 @@ void cpg_deliver(cpg_handle_t handle,
         asw_cmd->nodeid = be_swap32(get_local_nodeid());
         asw_cmd->pid    = 0; /* FIXME: unused */
 
-        msg_size = domain_status_to_msg(
+        if ((msg_size = domain_status_to_msg(
                         &di_head, asw_msg + sizeof(clv_cmd_msg_t),
-                        MESSAGE_BUFFER_SIZE - sizeof(clv_cmd_msg_t));
+                        MESSAGE_BUFFER_SIZE - sizeof(clv_cmd_msg_t))) < 0) {
+            log_error("unable to prepare domain status message");
+            return;
+        }
 
         /* FIXME: better error handling */
         log_debug("sending domain info: %lu", msg_size);
         
-        send_message(asw_msg, msg_size + sizeof(clv_cmd_msg_t));
+        send_message(asw_msg, (size_t) msg_size + sizeof(clv_cmd_msg_t));
     }
     else if (req_cmd.cmd == CLV_CMD_ANSWER) { /* delivering, FIXME: token */
         clv_client_t *cl;
@@ -177,7 +180,7 @@ void print_usage()
     printf("\nReport bugs to <%s>.\n", PACKAGE_BUGREPORT);
 }
 
-void cmdline_options(char argc, char *argv[])
+void cmdline_options(int argc, char *argv[])
 {
     int c, option_index = 0;
     static struct option long_options[] = {
@@ -227,14 +230,20 @@ int dispatch_request(clv_client_t *cl)
 {
     clv_cmd_msg_t   req_cmd, asw_cmd;
     cluster_node_t  *n;
-    size_t          msg_len;
+    ssize_t         msg_len;
     static char     msg[MESSAGE_BUFFER_SIZE]; /* FIXME: one buffer */
     
-    if ((msg_len = read(cl->fd, msg, MESSAGE_BUFFER_SIZE)) == 0) {
+    msg_len = read(cl->fd, msg, MESSAGE_BUFFER_SIZE);
+
+    if (msg_len == 0) {
         return -1; /* client disconnection */
     }
+    else if (msg_len < 0) {
+        log_error("error reading from client");
+        return 0; /* FIXME: better error handling */
+    }
     
-    if (clv_rcv_command(&req_cmd, msg, msg_len) == 0) {
+    if (clv_rcv_command(&req_cmd, msg, (size_t) msg_len) == 0) {
         log_error("malformed command from client: %p", cl);
         return 0; /* FIXME: better error handling */
     }
@@ -244,7 +253,7 @@ int dispatch_request(clv_client_t *cl)
     }
     
     if (n != 0) {
-        send_message(msg, msg_len); /* dispatch message to group */
+        send_message(msg, (size_t) msg_len); /* dispatch message to group */
     }
     else {
         asw_cmd.cmd             = CLV_CMD_ERROR;

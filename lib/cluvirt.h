@@ -45,7 +45,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 int setup_cpg(cpg_callbacks_t *);
 void dispatch_message(void);
-int send_message(void *, int);
+int send_message(void *, size_t);
 unsigned int get_local_nodeid(void);
 
 
@@ -135,8 +135,8 @@ int group_node_remove(cluster_node_head_t *, uint32_t, uint32_t);
 int member_init_list(cluster_node_head_t *);
 
 int domain_status_update(char *, domain_info_head_t *);
-int domain_status_to_msg(domain_info_head_t *, char *, size_t);
-int domain_status_from_msg(domain_info_head_t *, char *, size_t);
+ssize_t domain_status_to_msg(domain_info_head_t *, char *, size_t);
+ssize_t domain_status_from_msg(domain_info_head_t *, char *, size_t);
 
 
 #endif
