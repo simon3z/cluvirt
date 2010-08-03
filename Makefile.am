@@ -7,7 +7,7 @@ MAINTAINERCLEANFILES	= $(dist_m4_MACROS) configure depcomp ltmain.sh \
 			  compile config.h.in config.h.in~ \
 			  Makefile.in
 
-SUBDIRS                 = utils lib daemon client man
+SUBDIRS                 = utils lib daemon client man tests
 
 ACLOCAL_AMFLAGS		= -I m4
 

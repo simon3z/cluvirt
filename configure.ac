@@ -64,6 +64,7 @@ AC_CONFIG_FILES([Makefile
                  daemon/Makefile 
                  client/Makefile 
                  man/Makefile
+                 tests/Makefile
                  cluvirt.spec
                  cluvirtd.init
 ])
