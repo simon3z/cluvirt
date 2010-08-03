@@ -26,6 +26,11 @@ Building from the repository checkout (requires autoreconf):
   $ ./configure
   $ make
 
+Automated tests:
+
+  $ make check
+  $ make check-valgrind
+
 Building the tarball:
 
   $ make dist-gzip
