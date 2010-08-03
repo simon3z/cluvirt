@@ -41,14 +41,15 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <utils.h>
 
 
-typedef struct _clv_client_t {
-    int                         fd;
-    struct sockaddr_un          address;
-    socklen_t                   addrlen;
-    LIST_ENTRY(_clv_client_t)   next;
-} clv_client_t;
+typedef struct _cluvirtd_client_t {
+    int                             fd;
+    struct sockaddr_un              address;
+    socklen_t                       addrlen;
+    LIST_ENTRY(_cluvirtd_client_t)  next;
+} cluvirtd_client_t;
 
-typedef LIST_HEAD(_clv_client_head_t, _clv_client_t) clv_client_head_t;
+typedef LIST_HEAD(
+        _cluvirtd_client_head_t, _cluvirtd_client_t) cluvirtd_client_head_t;
 
 
 #define MESSAGE_BUFFER_SIZE     8192
@@ -61,9 +62,9 @@ typedef LIST_HEAD(_clv_client_head_t, _clv_client_t) clv_client_head_t;
 #define CMDLINE_OPT_DAEMON      0x0008
 
 
-static domain_info_head_t  di_head = LIST_HEAD_INITIALIZER(di_head);
-static cluster_node_head_t cn_head = STAILQ_HEAD_INITIALIZER(cn_head);
-static clv_client_head_t   cl_head = LIST_HEAD_INITIALIZER(cl_head);
+static clv_vminfo_head_t   di_head = LIST_HEAD_INITIALIZER(di_head);
+static clv_clnode_head_t   cn_head = STAILQ_HEAD_INITIALIZER(cn_head);
+static cluvirtd_client_head_t cl_head = LIST_HEAD_INITIALIZER(cl_head);
 
 static int cmdline_flags;
 static char *libvirt_uri = 0;
@@ -91,7 +92,7 @@ void cpg_deliver(cpg_handle_t handle,
         asw_cmd->nodeid = be_swap32(get_local_nodeid());
         asw_cmd->pid    = 0; /* FIXME: unused */
 
-        if ((msg_size = clv_domain_to_msg(
+        if ((msg_size = clv_vminfo_to_msg(
                         &di_head, asw_msg + sizeof(clv_cmd_msg_t),
                         MESSAGE_BUFFER_SIZE - sizeof(clv_cmd_msg_t))) < 0) {
             log_error("unable to prepare domain status message");
@@ -104,7 +105,7 @@ void cpg_deliver(cpg_handle_t handle,
         send_message(asw_msg, (size_t) msg_size + sizeof(clv_cmd_msg_t));
     }
     else if (req_cmd.cmd == CLV_CMD_ANSWER) { /* delivering, FIXME: token */
-        clv_client_t *cl;
+        cluvirtd_client_t *cl;
         
         LIST_FOREACH(cl, &cl_head, next) {
             write(cl->fd, msg, msg_len);
@@ -242,10 +243,10 @@ void cmdline_options(int argc, char *argv[])
     log_debug("libvirt_uri: %s", libvirt_uri);
 }
 
-int dispatch_request(clv_client_t *cl)
+int dispatch_request(cluvirtd_client_t *cl)
 {
     clv_cmd_msg_t   req_cmd, asw_cmd;
-    cluster_node_t  *n;
+    clv_clnode_t    *n;
     ssize_t         msg_len;
     static char     msg[MESSAGE_BUFFER_SIZE]; /* FIXME: one buffer */
     
@@ -313,7 +314,7 @@ void main_loop(void)
     FD_SET(fd_clv, &fds_active);
     
     while (1) {
-        clv_client_t *cl, *j;
+        cluvirtd_client_t *cl, *j;
         
         select_timeout.tv_sec   = 5;
         select_timeout.tv_usec  = 0;
@@ -321,13 +322,13 @@ void main_loop(void)
         fds_status = fds_active;
         select(FD_SETSIZE, &fds_status, 0, 0, &select_timeout);
 
-        domain_update_status(libvirt_uri, &di_head);
+        update_vminfo(libvirt_uri, &di_head);
         
         if (FD_ISSET(fd_cpg, &fds_status)) { /* dispatching cpg messages */
             dispatch_message();
         }
         else if (FD_ISSET(fd_clv, &fds_status)) { /* accepting connections */
-            cl = malloc(sizeof(clv_client_t));
+            cl = malloc(sizeof(cluvirtd_client_t));
             
             cl->addrlen = sizeof(cl->address);
             cl->fd = accept(

@@ -26,7 +26,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <sys/queue.h>
 #include <libvirt/libvirt.h> /* VIR_UUID_BUFLEN */
 
-typedef struct _domain_info_t {
+typedef struct _clv_vminfo_t {
     int                         id;
     char                        *name;
     unsigned char               uuid[VIR_UUID_BUFLEN];
@@ -37,11 +37,11 @@ typedef struct _domain_info_t {
     unsigned short              vncport;
     unsigned short              usage;
     struct timeval              update;
-    LIST_ENTRY(_domain_info_t)  next;
-} domain_info_t;
+    LIST_ENTRY(_clv_vminfo_t)   next;
+} clv_vminfo_t;
 
 /* big-endian structure */
-typedef struct __attribute__ ((__packed__)) _domain_info_msg_t {
+typedef struct __attribute__ ((__packed__)) _clv_vminfo_msg_t {
     uint32_t                    id;
     uint32_t                    memory;
     uint64_t                    cputime;
@@ -53,24 +53,24 @@ typedef struct __attribute__ ((__packed__)) _domain_info_msg_t {
     uint8_t                     uuid[VIR_UUID_BUFLEN];
     uint32_t                    payload_size;
     uint8_t                     payload[0];
-} domain_info_msg_t;
+} clv_vminfo_msg_t;
 
-typedef LIST_HEAD(_domain_info_head_t, _domain_info_t) domain_info_head_t;
+typedef LIST_HEAD(_clv_vminfo_head_t, _clv_vminfo_t) clv_vminfo_head_t;
 
 #define CLUSTER_NODE_ONLINE     0x0001
 #define CLUSTER_NODE_LOCAL      0x0002
 #define CLUSTER_NODE_JOINED     0x0004
 
-typedef struct _cluster_node_t {
+typedef struct _clv_clnode_t {
     uint32_t                        id;
     uint32_t                        pid;
     char                            *host;
     int                             status;
-    domain_info_head_t              domain;
-    STAILQ_ENTRY(_cluster_node_t)   next;
-} cluster_node_t;
+    clv_vminfo_head_t               domain;
+    STAILQ_ENTRY(_clv_clnode_t)     next;
+} clv_clnode_t;
 
-typedef STAILQ_HEAD(_cluster_node_head_t, _cluster_node_t) cluster_node_head_t;
+typedef STAILQ_HEAD(_clv_clnode_head_t, _clv_clnode_t) clv_clnode_head_t;
 
 #define CLV_CMD_ERROR       0xffffffff
 #define CLV_CMD_REQUEST     0x00000001
@@ -103,15 +103,15 @@ int clv_init(clv_handle_t *, const char *, int);
 void clv_free(clv_handle_t *);
 
 int clv_get_fd(clv_handle_t *);
-int clv_req_domains(clv_handle_t *, uint32_t, domain_info_head_t *);
+int clv_req_domains(clv_handle_t *, uint32_t, clv_vminfo_head_t *);
 void *clv_rcv_command(clv_cmd_msg_t *, void *, size_t);
 
-domain_info_t *clv_domain_new(const char *);
-void clv_domain_free(domain_info_t *);
+clv_vminfo_t *clv_vminfo_new(const char *);
+void clv_vminfo_free(clv_vminfo_t *);
 
-int clv_domain_set_name(domain_info_t *, const char *);
+int clv_vminfo_set_name(clv_vminfo_t *, const char *);
 
-ssize_t clv_domain_to_msg(domain_info_head_t *, char *, size_t);
-ssize_t clv_domain_from_msg(domain_info_head_t *, char *, size_t);
+ssize_t clv_vminfo_to_msg(clv_vminfo_head_t *, char *, size_t);
+ssize_t clv_vminfo_from_msg(clv_vminfo_head_t *, char *, size_t);
 
 #endif

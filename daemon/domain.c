@@ -41,12 +41,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 static uint16_t _libvirt_vncport(virDomain *);
 
 
-int domain_update_status(char *uri, domain_info_head_t *di_head)
+int update_vminfo(char *uri, clv_vminfo_head_t *di_head)
 {
     static int      id[LIBVIRT_ID_BUFFER_SIZE];
     int             n, i;
     virConnect      *lvh;
-    domain_info_t   *d, *j;
+    clv_vminfo_t    *d, *j;
     struct timeval  time_now;
     
     if ((lvh = virConnectOpen(uri)) == 0) {
@@ -104,7 +104,7 @@ int domain_update_status(char *uri, domain_info_head_t *di_head)
             
             vm_name = virDomainGetName(lv_domain);
 
-            d = clv_domain_new(vm_name); /* FIXME: check error */
+            d = clv_vminfo_new(vm_name); /* FIXME: check error */
             LIST_INSERT_HEAD(di_head, d, next);
             
             d->id           = id[i];
@@ -155,7 +155,7 @@ clean_loop1:
         if (i >= n) {
             log_debug("removing old domain info: %i", j->id);
             LIST_REMOVE(j, next);
-            clv_domain_free(j);
+            clv_vminfo_free(j);
         }
     }
 

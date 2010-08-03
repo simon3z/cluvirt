@@ -29,11 +29,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <utils.h>
 
 
-domain_info_t *clv_domain_new(const char *name)
+clv_vminfo_t *clv_vminfo_new(const char *name)
 {
-    domain_info_t *d;
+    clv_vminfo_t *d;
     
-    if ((d = malloc(sizeof(domain_info_t))) == 0) {
+    if ((d = malloc(sizeof(clv_vminfo_t))) == 0) {
         return 0;
     }
     
@@ -45,37 +45,37 @@ domain_info_t *clv_domain_new(const char *name)
     return d;
 }
 
-int clv_domain_set_name(domain_info_t *d, const char *name)
+int clv_vminfo_set_name(clv_vminfo_t *d, const char *name)
 {
     free(d->name);
     return ((d->name = strdup(name)) != 0) ? 0 : -1;
 }
 
-void clv_domain_free(domain_info_t *d)
+void clv_vminfo_free(clv_vminfo_t *d)
 {
     free(d->name);
     free(d);
 }
 
-ssize_t clv_domain_to_msg(
-        domain_info_head_t *di_head, char *msg, size_t max_size)
+ssize_t clv_vminfo_to_msg(
+        clv_vminfo_head_t *di_head, char *msg, size_t max_size)
 {
-    domain_info_t       *d;
-    domain_info_msg_t   *m;
+    clv_vminfo_t       *d;
+    clv_vminfo_msg_t   *m;
     size_t              p_offset, n_offset, name_size;
     
     p_offset = 0;
     
     LIST_FOREACH(d, di_head, next) {
         name_size   = strlen(d->name) + 1;
-        n_offset    = p_offset + sizeof(domain_info_msg_t) + name_size;
+        n_offset    = p_offset + sizeof(clv_vminfo_msg_t) + name_size;
         
         if (n_offset > max_size) {
             log_error("message buffer is not large enough: %lu", n_offset);
             return -1;
         }
         
-        m = (domain_info_msg_t*) (msg + p_offset);
+        m = (clv_vminfo_msg_t*) (msg + p_offset);
         
         m->id               = be_swap32((uint32_t) d->id);
         m->memory           = be_swap32((uint32_t) d->memory);
@@ -97,16 +97,16 @@ ssize_t clv_domain_to_msg(
     return (ssize_t) p_offset;
 }
 
-ssize_t clv_domain_from_msg(
-        domain_info_head_t *di_head, char *msg, size_t msg_size)
+ssize_t clv_vminfo_from_msg(
+        clv_vminfo_head_t *di_head, char *msg, size_t msg_size)
 {
-    domain_info_t       *d;
-    domain_info_msg_t   *m;
+    clv_vminfo_t        *d;
+    clv_vminfo_msg_t    *m;
     size_t              p_offset = 0, n_offset, name_size;
     
-    while ((p_offset + sizeof(domain_info_msg_t)) < msg_size) {
-        d = clv_domain_new(0);
-        m = (domain_info_msg_t*) (msg + p_offset);
+    while ((p_offset + sizeof(clv_vminfo_msg_t)) < msg_size) {
+        d = clv_vminfo_new(0);
+        m = (clv_vminfo_msg_t*) (msg + p_offset);
         
         d->id           = be_swap32(m->id);
         d->memory       = be_swap32(m->memory);
@@ -117,14 +117,14 @@ ssize_t clv_domain_from_msg(
         d->state        = m->state;
         name_size       = be_swap32(m->payload_size);
         
-        n_offset        = p_offset + sizeof(domain_info_msg_t) + name_size;
+        n_offset        = p_offset + sizeof(clv_vminfo_msg_t) + name_size;
         
         if (n_offset > msg_size) {
             log_error("malformed message: %lu %lu", n_offset, msg_size);
             return -1;
         }
         
-        d->name         = malloc(name_size); /* FIXME: clv_domain_set_name */
+        d->name         = malloc(name_size); /* FIXME: clv_vminfo_set_name */
         
         memcpy(d->name, m->payload, name_size);
         memcpy(d->uuid, m->uuid, sizeof(d->uuid));

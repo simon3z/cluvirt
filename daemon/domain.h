@@ -22,6 +22,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include <cluvirt.h>
 
-int domain_update_status(char *, domain_info_head_t *);
+int update_vminfo(char *, clv_vminfo_head_t *);
 
 #endif

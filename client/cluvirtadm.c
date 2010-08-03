@@ -42,7 +42,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define CMDLINE_OPT_XMLOUT      0x0008
 
 static int cmdline_flags;
-static cluster_node_head_t  cn_head = STAILQ_HEAD_INITIALIZER(cn_head);
+static clv_clnode_head_t    cn_head = STAILQ_HEAD_INITIALIZER(cn_head);
 
 
 int member_init_list()
@@ -70,9 +70,9 @@ int member_init_list()
     }
     
     for (i = 0; i < node_count; i++) {
-        cluster_node_t  *n;
+        clv_clnode_t    *n;
         
-        n = malloc(sizeof(cluster_node_t));
+        n = malloc(sizeof(clv_clnode_t));
         STAILQ_INSERT_TAIL(&cn_head, n, next);
 
         n->id           = (uint32_t) cman_nodes[i].cn_nodeid;
@@ -181,8 +181,8 @@ void cmdline_options(int argc, char *argv[])
 
 void print_status_txt(void)
 {
-    domain_info_t   *d;
-    cluster_node_t  *n;
+    clv_vminfo_t    *d;
+    clv_clnode_t    *n;
     char            vm_state;
 
     static char     state_name[] = {
@@ -233,8 +233,8 @@ void print_status_txt(void)
 
 void print_status_xml(void)
 {
-    domain_info_t   *d;
-    cluster_node_t  *n;
+    clv_vminfo_t    *d;
+    clv_clnode_t    *n;
 
     printf("<?xml version=\"1.0\"?>\n"
            "<%s version=\"%s\">\n<nodes>\n", PROGRAM_NAME, PACKAGE_VERSION);
@@ -265,7 +265,7 @@ void print_status_xml(void)
 int main_loop(void)
 {
     clv_handle_t    clvh;
-    cluster_node_t  *n;
+    clv_clnode_t    *n;
     
     member_init_list();
  

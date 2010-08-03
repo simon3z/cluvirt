@@ -58,16 +58,16 @@ int group_finish(void)
     return cman_finish(cman_handle);
 }
 
-int group_node_add(cluster_node_head_t *cn_head, uint32_t id, uint32_t pid)
+int group_node_add(clv_clnode_head_t *cn_head, uint32_t id, uint32_t pid)
 {
-    cluster_node_t *n;
+    clv_clnode_t *n;
     static char n_name[256];
     
     STAILQ_FOREACH(n, cn_head, next) {
          if (n->id == id && n->pid == pid) return -1; /* node already present */
     }
     
-    n = malloc(sizeof(cluster_node_t));
+    n = malloc(sizeof(clv_clnode_t));
     STAILQ_INSERT_TAIL(cn_head, n, next);
 
     n->id           = id;
@@ -97,10 +97,10 @@ int group_node_add(cluster_node_head_t *cn_head, uint32_t id, uint32_t pid)
     return 0;
 }
 
-int group_node_remove(cluster_node_head_t *cn_head, uint32_t id, uint32_t pid)
+int group_node_remove(clv_clnode_head_t *cn_head, uint32_t id, uint32_t pid)
 {
-    domain_info_t  *d;
-    cluster_node_t *n;
+    clv_vminfo_t   *d;
+    clv_clnode_t   *n;
     
     STAILQ_FOREACH(n, cn_head, next) {
          if (n->id == id && n->pid == pid) break;
@@ -110,11 +110,11 @@ int group_node_remove(cluster_node_head_t *cn_head, uint32_t id, uint32_t pid)
     
     log_debug("removing node '%s', id: %u, pid: %u", n->host, n->id, n->pid);
     
-    STAILQ_REMOVE(cn_head, n, _cluster_node_t, next);
+    STAILQ_REMOVE(cn_head, n, _clv_clnode_t, next);
     
     while ((d = LIST_FIRST(&n->domain)) != 0) { /* freeing node domains */
         LIST_REMOVE(d, next);
-        clv_domain_free(d);
+        clv_vminfo_free(d);
     }
     
     free(n->host);

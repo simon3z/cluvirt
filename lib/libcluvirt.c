@@ -139,7 +139,7 @@ ssize_t clv_wait_reply(clv_handle_t *clvh)
 }
 
 int clv_req_domains(
-        clv_handle_t *clvh, uint32_t nodeid, domain_info_head_t *di_head)
+        clv_handle_t *clvh, uint32_t nodeid, clv_vminfo_head_t *di_head)
 {
     ssize_t msg_len;
     clv_cmd_msg_t req_cmd;
@@ -166,7 +166,7 @@ int clv_req_domains(
             return -1; /* FIXME: improve error handling */
         }
         
-        if (clv_domain_from_msg(di_head,
+        if (clv_vminfo_from_msg(di_head,
                 (char *) clvh->reply + sizeof(clv_cmd_msg_t),
                 (size_t) msg_len - sizeof(clv_cmd_msg_t)) < 0) {
             return -1;

@@ -27,9 +27,9 @@ int utils_debug = 0;
 
 void domain_test1()
 {
-    domain_info_t *d;
+    clv_vminfo_t  *d;
     
-    if ((d = clv_domain_new("mydomain")) == 0) {
+    if ((d = clv_vminfo_new("mydomain")) == 0) {
         fprintf(stderr, "unable to create domain\n");
         exit(EXIT_FAILURE);
     }
@@ -39,7 +39,7 @@ void domain_test1()
         exit(EXIT_FAILURE);
     }
     
-    if (clv_domain_set_name(d, "mynewdomain") < 0) {
+    if (clv_vminfo_set_name(d, "mynewdomain") < 0) {
         fprintf(stderr, "unable to change domain name\n");
         exit(EXIT_FAILURE);
     }
@@ -49,7 +49,7 @@ void domain_test1()
         exit(EXIT_FAILURE);
     }
     
-    clv_domain_free(d);
+    clv_vminfo_free(d);
 }
 
 int main(int argc, char *argv[])

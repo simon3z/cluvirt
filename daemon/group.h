@@ -25,7 +25,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 int group_init(void);
 int group_finish(void);
-int group_node_add(cluster_node_head_t *, uint32_t, uint32_t);
-int group_node_remove(cluster_node_head_t *, uint32_t, uint32_t);
+int group_node_add(clv_clnode_head_t *, uint32_t, uint32_t);
+int group_node_remove(clv_clnode_head_t *, uint32_t, uint32_t);
 
 #endif
