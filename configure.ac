@@ -3,7 +3,7 @@
 
 AC_PREREQ(2.59)
 AC_INIT([cluvirt], [0.0.90], [federico.simoncelli@nethesis.it])
-AM_INIT_AUTOMAKE()
+AM_INIT_AUTOMAKE([-Wall])
 AC_CONFIG_HEADER([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -42,7 +42,8 @@ PKG_CHECK_MODULES([virt], [libvirt])
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([stdlib.h string.h syslog.h unistd.h])
+AC_CHECK_HEADERS([fcntl.h stdint.h stdlib.h string.h \
+                  sys/socket.h sys/time.h syslog.h unistd.h])
 AC_CHECK_HEADERS([corosync/cpg.h],,
     [AC_CHECK_HEADERS([openais/cpg.h],,
         [AC_MSG_ERROR([cpg.h header is missing])])])
@@ -52,15 +53,23 @@ AC_CHECK_HEADERS([libcman.h],,
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
-AC_TYPE_SIZE_T
 AC_HEADER_TIME
+AC_TYPE_PID_T
+AC_TYPE_SIZE_T
+AC_TYPE_SSIZE_T
+AC_TYPE_UINT16_T
+AC_TYPE_UINT32_T
+AC_TYPE_UINT64_T
+AC_TYPE_UINT8_T
 
 # Checks for library functions.
 AC_FUNC_ERROR_AT_LINE
 AC_FUNC_MALLOC
 AC_FUNC_SELECT_ARGTYPES
-AC_CHECK_FUNCS([memset select strdup strtol])
+AC_CHECK_FUNCS([dup2 gettimeofday memset select socket strdup])
+AC_FUNC_FORK
 
+# Output files.
 AC_CONFIG_FILES([Makefile
                  utils/Makefile
                  lib/Makefile 
