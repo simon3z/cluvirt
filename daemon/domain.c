@@ -102,18 +102,12 @@ int domain_update_status(char *uri, domain_info_head_t *di_head)
 
             log_debug("adding new domain info: %i", id[i]);
             
-            d = malloc(sizeof(domain_info_t));
+            vm_name = virDomainGetName(lv_domain);
+
+            d = clv_domain_new(vm_name); /* FIXME: check error */
             LIST_INSERT_HEAD(di_head, d, next);
             
-            d->id               = id[i];
-            
-            /* the following values won't be updated anymore */
-            if ((vm_name = virDomainGetName(lv_domain)) == 0) {
-                d->name         = strdup("(unknown)");
-            }
-            else {
-                d->name         = strdup(vm_name);
-            }
+            d->id           = id[i];
 
             if (virDomainGetUUID(lv_domain, d->uuid) < 0) {
                 memset(d->uuid, 0, VIR_UUID_BUFLEN);
@@ -161,8 +155,7 @@ clean_loop1:
         if (i >= n) {
             log_debug("removing old domain info: %i", j->id);
             LIST_REMOVE(j, next);
-            free(j->name);
-            free(j);
+            clv_domain_free(j);
         }
     }
 

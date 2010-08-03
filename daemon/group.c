@@ -114,8 +114,7 @@ int group_node_remove(cluster_node_head_t *cn_head, uint32_t id, uint32_t pid)
     
     while ((d = LIST_FIRST(&n->domain)) != 0) { /* freeing node domains */
         LIST_REMOVE(d, next);
-        free(d->name);
-        free(d);
+        clv_domain_free(d);
     }
     
     free(n->host);

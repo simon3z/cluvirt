@@ -29,6 +29,34 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <utils.h>
 
 
+domain_info_t *clv_domain_new(const char *name)
+{
+    domain_info_t *d;
+    
+    if ((d = malloc(sizeof(domain_info_t))) == 0) {
+        return 0;
+    }
+    
+    if ((d->name = strdup((name == 0) ? "(unknown)" : name)) == 0) {
+        free(d);
+        return 0;
+    }
+    
+    return d;
+}
+
+int clv_domain_set_name(domain_info_t *d, const char *name)
+{
+    free(d->name);
+    return ((d->name = strdup(name)) != 0) ? 0 : -1;
+}
+
+void clv_domain_free(domain_info_t *d)
+{
+    free(d->name);
+    free(d);
+}
+
 ssize_t clv_domain_to_msg(
         domain_info_head_t *di_head, char *msg, size_t max_size)
 {
@@ -77,7 +105,7 @@ ssize_t clv_domain_from_msg(
     size_t              p_offset = 0, n_offset, name_size;
     
     while ((p_offset + sizeof(domain_info_msg_t)) < msg_size) {
-        d = malloc(sizeof(domain_info_t));
+        d = clv_domain_new(0);
         m = (domain_info_msg_t*) (msg + p_offset);
         
         d->id           = be_swap32(m->id);
@@ -96,7 +124,7 @@ ssize_t clv_domain_from_msg(
             return -1;
         }
         
-        d->name         = malloc(name_size);
+        d->name         = malloc(name_size); /* FIXME: clv_domain_set_name */
         
         memcpy(d->name, m->payload, name_size);
         memcpy(d->uuid, m->uuid, sizeof(d->uuid));

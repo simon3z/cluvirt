@@ -81,6 +81,13 @@ exit_fail:
     return -1;
 }
 
+void clv_free(clv_handle_t *clvh)
+{
+    close(clvh->fd);
+    free(clvh->reply);
+    free(clvh);
+}
+
 int clv_get_fd(clv_handle_t *clvh)
 {
     return clvh->fd;

@@ -100,9 +100,16 @@ typedef struct _clv_handle_t {
 } clv_handle_t;
 
 int clv_init(clv_handle_t *, const char *, int);
+void clv_free(clv_handle_t *);
+
 int clv_get_fd(clv_handle_t *);
 int clv_req_domains(clv_handle_t *, uint32_t, domain_info_head_t *);
 void *clv_rcv_command(clv_cmd_msg_t *, void *, size_t);
+
+domain_info_t *clv_domain_new(const char *);
+void clv_domain_free(domain_info_t *);
+
+int clv_domain_set_name(domain_info_t *, const char *);
 
 ssize_t clv_domain_to_msg(domain_info_head_t *, char *, size_t);
 ssize_t clv_domain_from_msg(domain_info_head_t *, char *, size_t);
