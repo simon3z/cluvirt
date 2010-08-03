@@ -12,6 +12,9 @@ AC_PROG_CC
 AM_PROG_CC_C_O
 AC_PROG_LIBTOOL
 
+# Configure default CFLAGS.
+CFLAGS="-g -O2 -Wall -Wshadow -Wconversion"
+
 # Checks for x86_64 lib path.
 if test "$libdir" = "\${exec_prefix}/lib"; then
   if test -e "/usr/lib64"; then
