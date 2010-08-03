@@ -71,7 +71,6 @@ ssize_t clv_vminfo_to_msg(
         n_offset    = p_offset + sizeof(clv_vminfo_msg_t) + name_size;
         
         if (n_offset > max_size) {
-            log_error("message buffer is not large enough: %lu", n_offset);
             return -1;
         }
         
@@ -90,7 +89,6 @@ ssize_t clv_vminfo_to_msg(
         memcpy(m->uuid, d->uuid, sizeof(m->uuid));
         memcpy(m->payload, d->name, name_size);
         
-        log_debug("p_offset: %lu, n_offset: %lu, m: %p", p_offset, n_offset, m);
         p_offset            = n_offset;
     }
     
@@ -120,7 +118,6 @@ ssize_t clv_vminfo_from_msg(
         n_offset        = p_offset + sizeof(clv_vminfo_msg_t) + name_size;
         
         if (n_offset > msg_size) {
-            log_error("malformed message: %lu %lu", n_offset, msg_size);
             return -1;
         }
         
@@ -131,7 +128,6 @@ ssize_t clv_vminfo_from_msg(
 
         LIST_INSERT_HEAD(di_head, d, next);
 
-        log_debug("p_offset: %lu, n_offset: %lu, m: %p", p_offset, n_offset, m);
         p_offset        = n_offset;
     }
 

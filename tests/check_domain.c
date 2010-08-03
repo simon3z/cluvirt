@@ -23,7 +23,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <cluvirt.h>
 #include <utils.h>
 
-int utils_debug = 0;
 
 void domain_test1()
 {

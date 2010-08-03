@@ -38,7 +38,6 @@ int clv_init(clv_handle_t *clvh, const char *filename, int mode)
     struct sockaddr_un name;
 
     if ((sock = socket(PF_LOCAL, SOCK_STREAM, 0)) < 0) {
-        log_error("unable to create the cluvirt socket: %i", errno);
         return -1;
     }
 
@@ -50,20 +49,16 @@ int clv_init(clv_handle_t *clvh, const char *filename, int mode)
     if (mode == CLV_INIT_SERVER) {
         unlink(filename);
         
-        if (bind(sock, (struct sockaddr *) &name, sizeof (name)) != 0)
-        {
-            log_error("unable to bind the cluvirt socket: %i", errno);
+        if (bind(sock, (struct sockaddr *) &name, sizeof (name)) != 0)  {
             goto exit_fail;
         }
         
         if (listen(sock, 1) != 0) {
-            log_error("unable to listen on the cluvirt socket: %i", errno);
             goto exit_fail;
         }
     }
     else {
         if (connect(sock, (struct sockaddr *) &name, sizeof (name)) != 0) {
-             log_error("unable to connect to the cluvirt socket: %i", errno);
              goto exit_fail;
         }
     }
@@ -98,7 +93,6 @@ void *clv_rcv_command(clv_cmd_msg_t *rcv_cmd, void *msg, size_t msg_len)
     clv_cmd_msg_t *tmp_cmd = msg;
     
     if (msg_len < sizeof(clv_cmd_msg_t)) {
-        log_error("malformed message, size: %lu", msg_len);
         return 0;
     }
     
@@ -128,8 +122,6 @@ ssize_t clv_wait_reply(clv_handle_t *clvh)
     if (select(fd_max, &fds_read, 0, 0, &read_to) < 0) {
         return -1;
     }
-    
-    log_debug("timeout: %lu %lu", read_to.tv_sec, read_to.tv_usec);
     
     if (FD_ISSET(clvh->fd, &fds_read)) {
         return read(clvh->fd, clvh->reply, clvh->reply_len);
