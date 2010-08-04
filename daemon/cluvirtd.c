@@ -52,7 +52,6 @@ typedef LIST_HEAD(
         _cluvirtd_client_head_t, _cluvirtd_client_t) cluvirtd_client_head_t;
 
 
-#define MESSAGE_BUFFER_SIZE     8192
 #define DEVNULL_PATH            "/dev/null"
 
 #define PROGRAM_NAME            "cluvirtd"
@@ -61,6 +60,8 @@ typedef LIST_HEAD(
 #define CMDLINE_OPT_DEBUG       0x0004
 #define CMDLINE_OPT_DAEMON      0x0008
 
+
+static clv_handle_t _clv_h;
 
 static clv_vminfo_head_t   di_head = LIST_HEAD_INITIALIZER(di_head);
 static clv_clnode_head_t   cn_head = STAILQ_HEAD_INITIALIZER(cn_head);
@@ -74,7 +75,6 @@ void cpg_deliver(cpg_handle_t handle,
         const struct cpg_name *group_name, uint32_t nodeid,
         uint32_t pid, void *msg, size_t msg_len)
 {
-    static char     asw_msg[MESSAGE_BUFFER_SIZE];
     ssize_t         msg_size;
     clv_cmd_msg_t   req_cmd, *asw_cmd;
 
@@ -85,7 +85,7 @@ void cpg_deliver(cpg_handle_t handle,
     
     if (req_cmd.cmd == CLV_CMD_REQVMINFO
             && req_cmd.nodeid == get_local_nodeid()) { /* request is for us */
-        asw_cmd         = (clv_cmd_msg_t *) asw_msg;
+        asw_cmd         = (clv_cmd_msg_t *) _clv_h.reply;
         
         asw_cmd->cmd    = be_swap32(CLV_CMD_ANSVMINFO);
         asw_cmd->token  = 0; /* FIXME: unused */
@@ -93,8 +93,8 @@ void cpg_deliver(cpg_handle_t handle,
         asw_cmd->pid    = 0; /* FIXME: unused */
 
         if ((msg_size = clv_vminfo_to_msg(
-                        &di_head, asw_msg + sizeof(clv_cmd_msg_t),
-                        MESSAGE_BUFFER_SIZE - sizeof(clv_cmd_msg_t))) < 0) {
+                        &di_head, _clv_h.reply + sizeof(clv_cmd_msg_t),
+                        _clv_h.reply_len - sizeof(clv_cmd_msg_t))) < 0) {
             log_error("unable to prepare domain status message");
             return;
         }
@@ -102,7 +102,7 @@ void cpg_deliver(cpg_handle_t handle,
         /* FIXME: better error handling */
         log_debug("sending domain info: %lu", msg_size);
         
-        send_message(asw_msg, (size_t) msg_size + sizeof(clv_cmd_msg_t));
+        send_message(_clv_h.reply, (size_t) msg_size + sizeof(clv_cmd_msg_t));
     }
     else if (req_cmd.cmd == CLV_CMD_ANSVMINFO) { /* delivering, FIXME: token */
         cluvirtd_client_t *cl;
@@ -248,9 +248,8 @@ int dispatch_request(cluvirtd_client_t *cl)
     clv_cmd_msg_t   req_cmd, asw_cmd;
     clv_clnode_t    *n;
     ssize_t         msg_len;
-    static char     msg[MESSAGE_BUFFER_SIZE]; /* FIXME: one buffer */
     
-    msg_len = read(cl->fd, msg, MESSAGE_BUFFER_SIZE);
+    msg_len = read(cl->fd, _clv_h.reply, _clv_h.reply_len);
 
     if (msg_len == 0) {
         return -1; /* client disconnection */
@@ -260,7 +259,7 @@ int dispatch_request(cluvirtd_client_t *cl)
         return 0; /* FIXME: better error handling */
     }
     
-    if (clv_rcv_command(&req_cmd, msg, (size_t) msg_len) == 0) {
+    if (clv_rcv_command(&req_cmd,_clv_h.reply, (size_t) msg_len) == 0) {
         log_error("malformed command from client: %p", cl);
         return 0; /* FIXME: better error handling */
     }
@@ -270,7 +269,7 @@ int dispatch_request(cluvirtd_client_t *cl)
     }
     
     if (n != 0) {
-        send_message(msg, (size_t) msg_len); /* dispatch message to group */
+        send_message(_clv_h.reply, (size_t) msg_len); /* dispatch to group */
     }
     else {
         asw_cmd.cmd             = be_swap32(CLV_CMD_ERROR);
@@ -293,19 +292,18 @@ void main_loop(void)
     int             fd_cpg, fd_clv;
     fd_set          fds_active, fds_status;
     struct timeval  select_timeout;
-    clv_handle_t    clvh;
     
     if ((fd_cpg = setup_cpg(&cpg_callbacks)) < 0) {
         log_error("unable to initialize openais: %i", errno);
         exit(EXIT_FAILURE);
     }
     
-    if (clv_init(&clvh, CLV_SOCKET, CLV_INIT_SERVER) != 0) {
+    if (clv_init(&_clv_h, CLV_SOCKET, CLV_INIT_SERVER) != 0) {
         log_error("unable to initialize cluvirt socket: %i", errno);
         exit(EXIT_FAILURE);
     }
     
-    fd_clv = clv_get_fd(&clvh);
+    fd_clv = clv_get_fd(&_clv_h);
     
     lv_init(libvirt_uri);
     group_init();
