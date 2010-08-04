@@ -307,6 +307,7 @@ void main_loop(void)
     
     fd_clv = clv_get_fd(&clvh);
     
+    lv_init(libvirt_uri);
     group_init();
 
     FD_ZERO(&fds_active);
