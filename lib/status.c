@@ -103,8 +103,16 @@ ssize_t clv_vminfo_from_msg(
     size_t              p_offset = 0, n_offset, name_size;
     
     while ((p_offset + sizeof(clv_vminfo_msg_t)) < msg_size) {
-        d = clv_vminfo_new(0);
         m = (clv_vminfo_msg_t*) (msg + p_offset);
+        
+        name_size   = be_swap32(m->payload_size);
+        n_offset    = p_offset + sizeof(clv_vminfo_msg_t) + name_size;    
+        
+        if ((n_offset > msg_size) ||  (m->payload[name_size] != '\0')) {
+            return -1;
+        }
+        
+        d = clv_vminfo_new((const char *) m->payload);
         
         d->id           = be_swap32(m->id);
         d->memory       = be_swap32(m->memory);
@@ -113,24 +121,64 @@ ssize_t clv_vminfo_from_msg(
         d->ncpu         = be_swap16(m->ncpu);
         d->vncport      = be_swap16(m->vncport);
         d->state        = m->state;
-        name_size       = be_swap32(m->payload_size);
-        
-        n_offset        = p_offset + sizeof(clv_vminfo_msg_t) + name_size;
-        
-        if (n_offset > msg_size) {
-            return -1;
-        }
-        
-        d->name         = malloc(name_size); /* FIXME: clv_vminfo_set_name */
-        
-        memcpy(d->name, m->payload, name_size);
-        memcpy(d->uuid, m->uuid, sizeof(d->uuid));
 
+        memcpy(d->uuid, m->uuid, sizeof(d->uuid));
+        
         LIST_INSERT_HEAD(di_head, d, next);
 
         p_offset        = n_offset;
     }
 
     return (ssize_t) p_offset;
+}
+
+clv_clnode_t *clv_clnode_new(const char *host, uint32_t id, uint32_t pid)
+{
+    static char def_host[256];
+    clv_clnode_t *n;
+    
+    if ((n = malloc(sizeof(clv_vminfo_t))) == 0) {
+        return 0;
+    }
+    
+    n->id       = id;
+    n->pid      = pid;
+    n->status   = 0;
+    
+    LIST_INIT(&n->domain);
+    
+    if (host == 0) {
+        if (snprintf(def_host,
+                sizeof(def_host), "<node%u:%u>", n->id, n->pid) < 0) {
+            goto exit_fail;
+        }
+        if ((n->host = strdup(def_host)) == 0) {
+            goto exit_fail;
+        }
+    }
+    else {
+        if ((n->host = strdup(host)) == 0) {
+            goto exit_fail;
+        }
+    }
+    
+    return n;
+    
+exit_fail:
+    free(n);
+    return 0;
+}
+
+void clv_clnode_free(clv_clnode_t *n)
+{
+    clv_vminfo_t *d;
+    
+    while ((d = LIST_FIRST(&n->domain)) != 0) { /* freeing node domains */
+        LIST_REMOVE(d, next);
+        clv_vminfo_free(d);
+    }
+    
+    free(n->host);
+    free(n);
 }
 

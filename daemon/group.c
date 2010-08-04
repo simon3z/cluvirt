@@ -61,36 +61,28 @@ int group_finish(void)
 int group_node_add(clv_clnode_head_t *cn_head, uint32_t id, uint32_t pid)
 {
     clv_clnode_t *n;
-    static char n_name[256];
+    char *node_host = 0;
     
     STAILQ_FOREACH(n, cn_head, next) {
          if (n->id == id && n->pid == pid) return -1; /* node already present */
     }
     
-    n = malloc(sizeof(clv_clnode_t));
-    STAILQ_INSERT_TAIL(cn_head, n, next);
-
-    n->id           = id;
-    n->pid          = pid;
-    n->host         = 0;
-    n->status       = CLUSTER_NODE_ONLINE;
-    
     if (cman_handle != 0) {
         cman_node_t node_info;
-        
         memset(&node_info, 0, sizeof(node_info));
         
-        if (cman_get_node(cman_handle, (int) n->id, &node_info) == 0) {
-            n->host = strdup(node_info.cn_name);
+        if (cman_get_node(cman_handle, (int) id, &node_info) == 0) {
+            node_host = node_info.cn_name;
         }
     }
     
-    if (n->host == 0) {
-        snprintf(n_name, sizeof(n_name), "<node%u:%u>", n->id, n->pid);
-        n->host     = strdup(n_name);
+    if ((n = clv_clnode_new(node_host, id, pid)) == 0) {
+        log_error("unable to create new node: %i", errno);
+        exit(EXIT_FAILURE);
     }
     
-    LIST_INIT(&n->domain);
+    n->status |= CLUSTER_NODE_ONLINE;
+    STAILQ_INSERT_TAIL(cn_head, n, next);
 
     log_debug("adding node '%s', id: %u, pid: %u", n->host, n->id, n->pid);
     
@@ -99,7 +91,6 @@ int group_node_add(clv_clnode_head_t *cn_head, uint32_t id, uint32_t pid)
 
 int group_node_remove(clv_clnode_head_t *cn_head, uint32_t id, uint32_t pid)
 {
-    clv_vminfo_t   *d;
     clv_clnode_t   *n;
     
     STAILQ_FOREACH(n, cn_head, next) {
@@ -112,14 +103,8 @@ int group_node_remove(clv_clnode_head_t *cn_head, uint32_t id, uint32_t pid)
     
     STAILQ_REMOVE(cn_head, n, _clv_clnode_t, next);
     
-    while ((d = LIST_FIRST(&n->domain)) != 0) { /* freeing node domains */
-        LIST_REMOVE(d, next);
-        clv_vminfo_free(d);
-    }
-    
-    free(n->host);
-    free(n);
-        
+    clv_clnode_free(n); /* freeing node domains */
+
     return 0;
 }
 

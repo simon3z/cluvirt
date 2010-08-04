@@ -287,6 +287,13 @@ int main_loop(void)
         print_status_txt();
     }
     
+    while((n = STAILQ_FIRST(&cn_head)) != 0) {
+        STAILQ_REMOVE(&cn_head, n, _clv_clnode_t, next);
+        clv_clnode_free(n);
+    }
+    
+    clv_finish(&clvh);
+    
     return 0;
 }
 

@@ -76,11 +76,11 @@ exit_fail:
     return -1;
 }
 
-void clv_free(clv_handle_t *clvh)
+void clv_finish(clv_handle_t *clvh)
 {
     close(clvh->fd);
     free(clvh->reply);
-    free(clvh);
+    clvh->reply_len = 0;
 }
 
 int clv_get_fd(clv_handle_t *clvh)

@@ -100,7 +100,7 @@ typedef struct _clv_handle_t {
 } clv_handle_t;
 
 int clv_init(clv_handle_t *, const char *, int);
-void clv_free(clv_handle_t *);
+void clv_finish(clv_handle_t *);
 
 int clv_get_fd(clv_handle_t *);
 int clv_req_domains(clv_handle_t *, uint32_t, clv_vminfo_head_t *);
@@ -113,5 +113,8 @@ int clv_vminfo_set_name(clv_vminfo_t *, const char *);
 
 ssize_t clv_vminfo_to_msg(clv_vminfo_head_t *, char *, size_t);
 ssize_t clv_vminfo_from_msg(clv_vminfo_head_t *, char *, size_t);
+
+clv_clnode_t *clv_clnode_new(const char *, uint32_t, uint32_t);
+void clv_clnode_free(clv_clnode_t *);
 
 #endif
