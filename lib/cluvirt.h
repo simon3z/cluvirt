@@ -72,9 +72,11 @@ typedef struct _clv_clnode_t {
 
 typedef STAILQ_HEAD(_clv_clnode_head_t, _clv_clnode_t) clv_clnode_head_t;
 
-#define CLV_CMD_ERROR       0xffffffff
-#define CLV_CMD_REQUEST     0x00000001
-#define CLV_CMD_ANSWER      0xff000001
+#define CLV_CMD_ERROR           0xffffffff
+#define CLV_CMD_REQVMINFO       0x00000001
+#define CLV_CMD_ANSVMINFO       0xff000001
+#define CLV_CMD_REQDESTROYVM    0x00000002
+#define CLV_CMD_ANSDESTROYVM    0xff000002
 
 /* big-endian structure */
 typedef struct __attribute__ ((__packed__)) _clv_cmd_msg_t {
@@ -103,7 +105,7 @@ int clv_init(clv_handle_t *, const char *, int);
 void clv_finish(clv_handle_t *);
 
 int clv_get_fd(clv_handle_t *);
-int clv_req_domains(clv_handle_t *, uint32_t, clv_vminfo_head_t *);
+int clv_fetch_vminfo(clv_handle_t *, uint32_t, clv_vminfo_head_t *);
 void *clv_rcv_command(clv_cmd_msg_t *, void *, size_t);
 
 clv_vminfo_t *clv_vminfo_new(const char *);

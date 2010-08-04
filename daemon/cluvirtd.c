@@ -83,11 +83,11 @@ void cpg_deliver(cpg_handle_t handle,
         return;
     }
     
-    if (req_cmd.cmd == CLV_CMD_REQUEST
+    if (req_cmd.cmd == CLV_CMD_REQVMINFO
             && req_cmd.nodeid == get_local_nodeid()) { /* request is for us */
         asw_cmd         = (clv_cmd_msg_t *) asw_msg;
         
-        asw_cmd->cmd    = be_swap32(CLV_CMD_ANSWER);
+        asw_cmd->cmd    = be_swap32(CLV_CMD_ANSVMINFO);
         asw_cmd->token  = 0; /* FIXME: unused */
         asw_cmd->nodeid = be_swap32(get_local_nodeid());
         asw_cmd->pid    = 0; /* FIXME: unused */
@@ -104,7 +104,7 @@ void cpg_deliver(cpg_handle_t handle,
         
         send_message(asw_msg, (size_t) msg_size + sizeof(clv_cmd_msg_t));
     }
-    else if (req_cmd.cmd == CLV_CMD_ANSWER) { /* delivering, FIXME: token */
+    else if (req_cmd.cmd == CLV_CMD_ANSVMINFO) { /* delivering, FIXME: token */
         cluvirtd_client_t *cl;
         
         LIST_FOREACH(cl, &cl_head, next) {
@@ -273,7 +273,7 @@ int dispatch_request(cluvirtd_client_t *cl)
         send_message(msg, (size_t) msg_len); /* dispatch message to group */
     }
     else {
-        asw_cmd.cmd             = CLV_CMD_ERROR;
+        asw_cmd.cmd             = be_swap32(CLV_CMD_ERROR);
         asw_cmd.token           = 0;
         asw_cmd.nodeid          = be_swap32(get_local_nodeid());
         asw_cmd.pid             = 0;

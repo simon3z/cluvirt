@@ -275,7 +275,7 @@ int main_loop(void)
     }
     
     STAILQ_FOREACH(n, &cn_head, next) {
-        if (clv_req_domains(&clvh, n->id, &n->domain) == 0) {
+        if (clv_fetch_vminfo(&clvh, n->id, &n->domain) == 0) {
             n->status |= CLUSTER_NODE_JOINED;
         }
     }

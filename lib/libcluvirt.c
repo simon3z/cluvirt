@@ -130,13 +130,13 @@ ssize_t clv_wait_reply(clv_handle_t *clvh)
     return 0;
 }
 
-int clv_req_domains(
+int clv_fetch_vminfo(
         clv_handle_t *clvh, uint32_t nodeid, clv_vminfo_head_t *di_head)
 {
     ssize_t msg_len;
     clv_cmd_msg_t req_cmd;
     
-    req_cmd.cmd     = be_swap32(CLV_CMD_REQUEST);
+    req_cmd.cmd     = be_swap32(CLV_CMD_REQVMINFO);
     req_cmd.token   = be_swap32(0); /* FIXME: unused */
     req_cmd.nodeid  = be_swap32(nodeid);
     req_cmd.pid     = be_swap32(0); /* FIXME: unused */
@@ -154,7 +154,7 @@ int clv_req_domains(
             return -1;
         }
         
-        if (asw_cmd.cmd != CLV_CMD_ANSWER || asw_cmd.nodeid != nodeid) {
+        if (asw_cmd.cmd != CLV_CMD_ANSVMINFO || asw_cmd.nodeid != nodeid) {
             return -1; /* FIXME: improve error handling */
         }
         
