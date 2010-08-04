@@ -22,6 +22,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include <cluvirt.h>
 
-int update_vminfo(char *, clv_vminfo_head_t *);
+int lv_init(char *);
+int lv_finish(void);
+
+int lv_update_vminfo(clv_vminfo_head_t *);
+int lv_destroy_vm(const char *);
 
 #endif
