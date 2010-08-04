@@ -1,5 +1,5 @@
 /*
-check_domain - cluvirt domain unit test.
+check_handle - cluvirt handle unit test.
 Copyright (C) 2009  Federico Simoncelli <federico.simoncelli@nethesis.it>
 
 This program is free software; you can redistribute it and/or
@@ -19,42 +19,34 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <cluvirt.h>
 #include <utils.h>
 
+#define TMPSOCKPATH "/tmp/clvtest1.sock"
 
-void domain_test1()
+void handle_test1()
 {
-    clv_vminfo_t  *d;
+    clv_handle_t clvh;
     
-    if ((d = clv_vminfo_new("mydomain")) == 0) {
-        fprintf(stderr, "unable to create domain\n");
+    if (clv_init(&clvh, TMPSOCKPATH, CLV_INIT_SERVER) != 0) {
+        fprintf(stderr, "unable to initialize clv handle\n");
         exit(EXIT_FAILURE);
     }
     
-    if (strcmp(d->name, "mydomain") != 0) {
-        fprintf(stderr, "unable to set domain name\n");
+    clv_finish(&clvh);
+    
+    if (unlink(TMPSOCKPATH) != 0) {
+        fprintf(stderr, "unable to remove socket: %s\n", TMPSOCKPATH);
         exit(EXIT_FAILURE);
     }
-    
-    if (clv_vminfo_set_name(d, "mynewdomain") < 0) {
-        fprintf(stderr, "unable to change domain name\n");
-        exit(EXIT_FAILURE);
-    }
-    
-    if (strcmp(d->name, "mynewdomain") != 0) {
-        fprintf(stderr, "unable to properly change domain name\n");
-        exit(EXIT_FAILURE);
-    }
-    
-    clv_vminfo_free(d);
 }
 
 int main(int argc, char *argv[])
 {
-    printf("=> running domain_test1()\n");
-    domain_test1();
+    printf("=> running handle_test1()\n");
+    handle_test1();
     
     return EXIT_SUCCESS;
 }

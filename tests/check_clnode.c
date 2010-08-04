@@ -1,5 +1,5 @@
 /*
-check_domain - cluvirt domain unit test.
+check_domain - cluvirt clnode unit test.
 Copyright (C) 2009  Federico Simoncelli <federico.simoncelli@nethesis.it>
 
 This program is free software; you can redistribute it and/or
@@ -24,37 +24,47 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <utils.h>
 
 
-void domain_test1()
+void clnode_test1()
 {
-    clv_vminfo_t  *d;
+    int i;
+    clv_clnode_t *n;
+    clv_vminfo_t *d;
     
-    if ((d = clv_vminfo_new("mydomain")) == 0) {
-        fprintf(stderr, "unable to create domain\n");
+    if ((n = clv_clnode_new("testnode", 1, 1)) == 0) {
+        fprintf(stderr, "unable to create clnode\n");
         exit(EXIT_FAILURE);
     }
     
-    if (strcmp(d->name, "mydomain") != 0) {
-        fprintf(stderr, "unable to set domain name\n");
+    for (i = 0; i < 10; i++) {
+        if ((d = clv_vminfo_new("testvm")) == 0) {
+            fprintf(stderr, "unable to create clnode\n");
+            exit(EXIT_FAILURE);
+        }
+        LIST_INSERT_HEAD(&n->domain, d, next);
+    }
+    
+    clv_clnode_free(n);
+}
+
+void clnode_test2()
+{
+    clv_clnode_t *n;
+    
+    if ((n = clv_clnode_new("testnode", 1, 1)) == 0) {
+        fprintf(stderr, "unable to create clnode\n");
         exit(EXIT_FAILURE);
     }
     
-    if (clv_vminfo_set_name(d, "mynewdomain") < 0) {
-        fprintf(stderr, "unable to change domain name\n");
-        exit(EXIT_FAILURE);
-    }
-    
-    if (strcmp(d->name, "mynewdomain") != 0) {
-        fprintf(stderr, "unable to properly change domain name\n");
-        exit(EXIT_FAILURE);
-    }
-    
-    clv_vminfo_free(d);
+    clv_clnode_free(n);
 }
 
 int main(int argc, char *argv[])
 {
-    printf("=> running domain_test1()\n");
-    domain_test1();
+    printf("=> running clnode_test1()\n");
+    clnode_test1();
+    
+    printf("=> running clnode_test2()\n");
+    clnode_test2();
     
     return EXIT_SUCCESS;
 }
