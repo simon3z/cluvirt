@@ -322,7 +322,7 @@ void main_loop(void)
         fds_status = fds_active;
         select(FD_SETSIZE, &fds_status, 0, 0, &select_timeout);
 
-        update_vminfo(libvirt_uri, &di_head);
+        lv_update_vminfo(&di_head);
         
         if (FD_ISSET(fd_cpg, &fds_status)) { /* dispatching cpg messages */
             dispatch_message();
