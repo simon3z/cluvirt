@@ -1,5 +1,5 @@
 /*
-check_domain - cluvirt domain unit test.
+chkutils.h - cluvirt unit test utility.
 Copyright (C) 2009  Federico Simoncelli <federico.simoncelli@nethesis.it>
 
 This program is free software; you can redistribute it and/or
@@ -17,30 +17,19 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <cluvirt.h>
-#include <utils.h>
+#ifndef __CHKUTILS_H_
+#define __CHKUTILS_H_
 
-#include <chkutils.h>
+#define chkutils_check(expr) do {                   \
+    if (!(expr)) {                                  \
+        fprintf(stderr, "FAIL: %s:%i `%s'\n",__FILE__, __LINE__, #expr);    \
+        exit(-1);                                   \
+    }                                               \
+} while (/*CONSTCOND*/0)
 
-void domain_test1()
-{
-    clv_vminfo_t  *d;
+#define chkutils_test_function(fun) do {            \
+    fprintf(stdout, "=> running %s()\n", #fun);     \
+    fun();                                          \
+} while (/*CONSTCOND*/0)
 
-    chkutils_check((d = clv_vminfo_new("mydomain")) != 0);
-    
-    chkutils_check(strcmp(d->name, "mydomain") == 0);
-    chkutils_check(clv_vminfo_set_name(d, "mynewdomain") == 0);
-    chkutils_check(strcmp(d->name, "mynewdomain") == 0);
-    
-    clv_vminfo_free(d);
-}
-
-int main(int argc, char *argv[])
-{
-    chkutils_test_function(domain_test1);   
-    return EXIT_SUCCESS;
-}
-
+#endif

@@ -24,29 +24,24 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <cluvirt.h>
 #include <utils.h>
 
+#include <chkutils.h>
+
 #define TMPSOCKPATH "/tmp/clvtest1.sock"
 
 void handle_test1()
 {
     clv_handle_t clvh;
     
-    if (clv_init(&clvh, TMPSOCKPATH, CLV_INIT_SERVER) != 0) {
-        fprintf(stderr, "unable to initialize clv handle\n");
-        exit(EXIT_FAILURE);
-    }
+    chkutils_check(clv_init(&clvh, TMPSOCKPATH, CLV_INIT_SERVER) == 0);
     
     clv_finish(&clvh);
     
-    if (unlink(TMPSOCKPATH) != 0) {
-        fprintf(stderr, "unable to remove socket: %s\n", TMPSOCKPATH);
-        exit(EXIT_FAILURE);
-    }
+    chkutils_check(unlink(TMPSOCKPATH) == 0);
 }
 
 int main(int argc, char *argv[])
 {
-    printf("=> running handle_test1()\n");
-    handle_test1();
+    chkutils_test_function(handle_test1);
     
     return EXIT_SUCCESS;
 }

@@ -23,6 +23,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <cluvirt.h>
 #include <utils.h>
 
+#include <chkutils.h>
 
 void clnode_test1()
 {
@@ -30,16 +31,10 @@ void clnode_test1()
     clv_clnode_t *n;
     clv_vminfo_t *d;
     
-    if ((n = clv_clnode_new("testnode", 1, 1)) == 0) {
-        fprintf(stderr, "unable to create clnode\n");
-        exit(EXIT_FAILURE);
-    }
+    chkutils_check((n = clv_clnode_new("testnode", 1, 1)) != 0);
     
     for (i = 0; i < 10; i++) {
-        if ((d = clv_vminfo_new("testvm")) == 0) {
-            fprintf(stderr, "unable to create clnode\n");
-            exit(EXIT_FAILURE);
-        }
+        chkutils_check((d = clv_vminfo_new("testvm")) != 0);
         LIST_INSERT_HEAD(&n->domain, d, next);
     }
     
@@ -50,21 +45,14 @@ void clnode_test2()
 {
     clv_clnode_t *n;
     
-    if ((n = clv_clnode_new("testnode", 1, 1)) == 0) {
-        fprintf(stderr, "unable to create clnode\n");
-        exit(EXIT_FAILURE);
-    }
-    
+    chkutils_check((n = clv_clnode_new("testnode", 1, 1)) != 0);
     clv_clnode_free(n);
 }
 
 int main(int argc, char *argv[])
 {
-    printf("=> running clnode_test1()\n");
-    clnode_test1();
-    
-    printf("=> running clnode_test2()\n");
-    clnode_test2();
+    chkutils_test_function(clnode_test1);
+    chkutils_test_function(clnode_test2);
     
     return EXIT_SUCCESS;
 }
