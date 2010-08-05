@@ -9,6 +9,8 @@ check-valgrind: $(check_PROGRAMS)
 check_PROGRAMS = check_domain check_clnode check_handle
 TESTS = $(check_PROGRAMS)
 
+noinst_HEADERS = chkutils.h
+
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/utils \
 	-I$(top_srcdir)/lib
