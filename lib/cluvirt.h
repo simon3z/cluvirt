@@ -40,6 +40,8 @@ typedef struct _clv_vminfo_t {
     LIST_ENTRY(_clv_vminfo_t)   next;
 } clv_vminfo_t;
 
+typedef LIST_HEAD(_clv_vminfo_head_t, _clv_vminfo_t) clv_vminfo_head_t;
+
 /* big-endian structure */
 typedef struct __attribute__ ((__packed__)) _clv_vminfo_msg_t {
     uint32_t                    id;
@@ -55,8 +57,6 @@ typedef struct __attribute__ ((__packed__)) _clv_vminfo_msg_t {
     uint8_t                     payload[0];
 } clv_vminfo_msg_t;
 
-typedef LIST_HEAD(_clv_vminfo_head_t, _clv_vminfo_t) clv_vminfo_head_t;
-
 #define CLUSTER_NODE_ONLINE     0x0001
 #define CLUSTER_NODE_LOCAL      0x0002
 #define CLUSTER_NODE_JOINED     0x0004
@@ -66,7 +66,6 @@ typedef struct _clv_clnode_t {
     uint32_t                        pid;
     char                            *host;
     int                             status;
-    clv_vminfo_head_t               domain;
     STAILQ_ENTRY(_clv_clnode_t)     next;
 } clv_clnode_t;
 

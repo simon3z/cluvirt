@@ -27,26 +27,27 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 void clnode_test1()
 {
-    int i;
     clv_clnode_t *n;
-    clv_vminfo_t *d;
     
     chkutils_check((n = clv_clnode_new("testnode", 1, 1)) != 0);
-    
-    for (i = 0; i < 10; i++) {
-        chkutils_check((d = clv_vminfo_new("testvm")) != 0);
-        LIST_INSERT_HEAD(&n->domain, d, next);
-    }
-    
     clv_clnode_free(n);
 }
 
 void clnode_test2()
 {
+    int i;
     clv_clnode_t *n;
+    clv_clnode_head_t h = STAILQ_HEAD_INITIALIZER(h);
+
+    for (i = 0; i < 10; i++) {
+        chkutils_check((n = clv_clnode_new("testnode", 1, 1)) != 0);
+        STAILQ_INSERT_TAIL(&h, n, next);
+    }
     
-    chkutils_check((n = clv_clnode_new("testnode", 1, 1)) != 0);
-    clv_clnode_free(n);
+    while (n = STAILQ_FIRST(&h)) {
+        STAILQ_REMOVE(&h, n, _clv_clnode_t, next);
+        clv_clnode_free(n);    
+    }
 }
 
 int main(int argc, char *argv[])

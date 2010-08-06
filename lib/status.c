@@ -145,8 +145,6 @@ clv_clnode_t *clv_clnode_new(const char *host, uint32_t id, uint32_t pid)
     n->pid      = pid;
     n->status   = 0;
     
-    LIST_INIT(&n->domain);
-    
     if (host == 0) {
         if (snprintf(def_host,
                 sizeof(def_host), "<node%u:%u>", n->id, n->pid) < 0) {
@@ -171,13 +169,6 @@ exit_fail:
 
 void clv_clnode_free(clv_clnode_t *n)
 {
-    clv_vminfo_t *d;
-    
-    while ((d = LIST_FIRST(&n->domain)) != 0) { /* freeing node domains */
-        LIST_REMOVE(d, next);
-        clv_vminfo_free(d);
-    }
-    
     free(n->host);
     free(n);
 }

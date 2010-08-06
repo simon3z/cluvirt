@@ -41,8 +41,20 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define CMDLINE_OPT_DEBUG       0x0004
 #define CMDLINE_OPT_XMLOUT      0x0008
 
+
+typedef struct _clvadm_vmtable_t {
+    uint32_t                        nodeid;
+    clv_vminfo_head_t               vmlist;
+    LIST_ENTRY(_clvadm_vmtable_t)   next;
+} clvadm_vmtable_t;
+
+typedef LIST_HEAD(
+            _clvadm_vmtable_head_t, _clvadm_vmtable_t) clvadm_vmtable_head_t;
+
+
 static int cmdline_flags;
-static clv_clnode_head_t    cn_head = STAILQ_HEAD_INITIALIZER(cn_head);
+static clv_clnode_head_t     cn_head = STAILQ_HEAD_INITIALIZER(cn_head);
+static clvadm_vmtable_head_t vi_head = LIST_HEAD_INITIALIZER(vi_head);
 
 
 int member_init_list()
@@ -86,8 +98,6 @@ int member_init_list()
         if (cman_nodes[i].cn_nodeid == local_node.cn_nodeid) {
             n->status   |= CLUSTER_NODE_LOCAL;
         }
-        
-        LIST_INIT(&n->domain);
     }
     
     free(cman_nodes);
@@ -220,7 +230,15 @@ void print_status_txt(void)
                     "--", "-------", "----", "--", "----", "---", "----");
 
     STAILQ_FOREACH(n, &cn_head, next) {
-        LIST_FOREACH(d, &n->domain, next) {
+        clvadm_vmtable_t *t;
+        
+        LIST_FOREACH(t, &vi_head, next) {   /* FIXME: preformances */
+            if (t->nodeid == n->id) break;
+        }
+        
+        if (t == 0) continue;
+        
+        LIST_FOREACH(d, &t->vmlist, next) {
             vm_state = (char) ((d->state < sizeof(state_name)) ?
                                 state_name[d->state] : state_name[0]);
 
@@ -250,7 +268,15 @@ void print_status_xml(void)
     printf("</nodes>\n<virtuals>\n");
 
     STAILQ_FOREACH(n, &cn_head, next) {
-        LIST_FOREACH(d, &n->domain, next) {
+        clvadm_vmtable_t *t;
+        
+        LIST_FOREACH(t, &vi_head, next) {   /* FIXME: preformances */
+            if (t->nodeid == n->id) break;
+        }
+        
+        if (t == 0) continue;
+        
+        LIST_FOREACH(d, &t->vmlist, next) {
             printf("  <vm id=\"%i\" uuid=\"%s\"\n"
                    "      name=\"%s\" node=\"%s\" state=\"%i\" vncport=\"%i\""
                    " memory=\"%lu\" usage=\"%i\"/>\n",
@@ -275,9 +301,16 @@ int main_loop(void)
     }
     
     STAILQ_FOREACH(n, &cn_head, next) {
-        if (clv_fetch_vminfo(&clvh, n->id, &n->domain) == 0) {
+        clvadm_vmtable_t *t = malloc(sizeof(clvadm_vmtable_t));
+        
+        t->nodeid = n->id;
+        LIST_INIT(&t->vmlist);
+        
+        if (clv_fetch_vminfo(&clvh, n->id, &t->vmlist) == 0) {
             n->status |= CLUSTER_NODE_JOINED;
         }
+        
+        LIST_INSERT_HEAD(&vi_head, t, next);
     }
 
     if (cmdline_flags & CMDLINE_OPT_XMLOUT) {
