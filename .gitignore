@@ -6,8 +6,9 @@ Makefile.in
 .libs
 /aclocal.m4
 /autom4te.cache
-/cluvirt.spec
+/client/cluvirtadm
 /cluvirtd.init
+/cluvirt.spec
 /compile
 /config.guess
 /config.h
@@ -16,13 +17,12 @@ Makefile.in
 /config.status
 /config.sub
 /configure
+/daemon/cluvirtd
 /depcomp
 /install-sh
 /libtool
 /ltmain.sh
-/missing
-/stamp-h1
 /man/cluvirtadm.8
 /man/cluvirtd.8
-/client/cluvirtadm
-/daemon/cluvirtd
+/missing
+/stamp-h1
