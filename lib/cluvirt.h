@@ -26,6 +26,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <sys/queue.h>
 #include <libvirt/libvirt.h> /* VIR_UUID_BUFLEN */
 
+#ifdef HAVE_COROSYNC_CPG_H
+#include <corosync/cpg.h>
+#else
+#include <openais/cpg.h>
+#endif
+
 typedef struct _clv_vminfo_t {
     int                         id;
     char                        *name;
@@ -99,6 +105,17 @@ typedef struct _clv_handle_t {
     void            *reply;
     size_t          reply_len;
 } clv_handle_t;
+
+typedef int clv_msg_callback_fn_t(clv_cmd_msg_t *);
+
+typedef struct _clv_group_t {
+    int                     fd;
+    cpg_handle_t            cpg;
+    struct cpg_name         name;
+    uint32_t                nodeid;
+    clv_clnode_head_t       nodes;
+    clv_msg_callback_fn_t   *msgcb;
+} clv_group_t;
 
 int clv_init(clv_handle_t *, const char *, int);
 void clv_finish(clv_handle_t *);
