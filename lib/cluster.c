@@ -29,77 +29,179 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <errno.h>
 #include <error.h>
 
-#include <cluster.h>
+#include <cluvirt.h>
 #include <utils.h>
 
 
-static cpg_handle_t daemon_handle;
-static struct cpg_name daemon_name;
-static unsigned int local_nodeid;
+#define CLUVIRT_GROUP_NAME      "cluvirtd"
 
 
-int setup_cpg(cpg_callbacks_t *cpg_callbacks)
+static int clv_group_add(
+        clv_clnode_head_t *cn_head, uint32_t id, uint32_t pid)
 {
-    int fd = 0;
+    clv_clnode_t *n;
+    char *node_host = 0;
+    
+    STAILQ_FOREACH(n, cn_head, next) {
+         if (n->id == id && n->pid == pid) return -1; /* node already present */
+    }
+    
+/* FIXME: enable cman
+    if (cman_handle != 0) {
+        cman_node_t node_info;
+        memset(&node_info, 0, sizeof(node_info));
+        
+        if (cman_get_node(cman_handle, (int) id, &node_info) == 0) {
+            node_host = node_info.cn_name;
+        }
+    }
+*/
+    if ((n = clv_clnode_new(node_host, id, pid)) == 0) {
+        log_error("unable to create new node: %i", errno);
+        exit(EXIT_FAILURE);
+    }
+    
+    n->status |= CLUSTER_NODE_ONLINE;
+    STAILQ_INSERT_TAIL(cn_head, n, next);
+
+    log_debug("adding node '%s', id: %u, pid: %u", n->host, n->id, n->pid);
+    
+    return 0;
+}
+
+static int clv_group_remove(
+        clv_clnode_head_t *cn_head, uint32_t id, uint32_t pid)
+{
+    clv_clnode_t   *n;
+    
+    STAILQ_FOREACH(n, cn_head, next) {
+         if (n->id == id && n->pid == pid) break;
+    }
+    
+    if (n == 0) return -1; /* node not present */
+    
+    log_debug("removing node '%s', id: %u, pid: %u", n->host, n->id, n->pid);
+    
+    STAILQ_REMOVE(cn_head, n, _clv_clnode_t, next);
+    
+    clv_clnode_free(n); /* freeing node domains */
+
+    return 0;
+}
+
+void group_cpg_deliver(cpg_handle_t handle,
+        const struct cpg_name *group_name, uint32_t nodeid,
+        uint32_t pid, void *msg, size_t msg_len)
+{
+    clv_group_t *grph = 0;
+    clv_cmd_msg_t *c_msg = 0;
+
+    if (cpg_context_get(handle, (void **) &grph) != CPG_OK) {
+        return; /* TODO: error? */
+    }
+
+    if (msg_len < sizeof(clv_cmd_msg_t)) {
+        return; /* TODO: error? */
+    }
+
+    c_msg = msg;
+
+    c_msg->cmd          = be_swap32(c_msg->cmd);
+    c_msg->token        = be_swap32(c_msg->token);
+    c_msg->nodeid       = be_swap32(c_msg->nodeid);
+    c_msg->pid          = be_swap32(c_msg->pid);
+    c_msg->payload_size = be_swap32(c_msg->payload_size);
+
+    grph->msgcb(c_msg);
+}
+
+void group_cpg_confchg(
+        cpg_handle_t handle, const struct cpg_name *group_name,
+        const struct cpg_address *member_list, size_t member_list_entries,
+        const struct cpg_address *left_list, size_t left_list_entries,
+        const struct cpg_address *joined_list, size_t joined_list_entries)
+{
+    size_t i;
+    clv_group_t *grph;
+
+    if (cpg_context_get(handle, (void **) &grph) != CPG_OK) {
+        return; /* error message */
+    }
+    
+    /* adding member nodes */
+    for (i = 0; i < member_list_entries; i++) {
+        clv_group_add(&grph->nodes, member_list[i].nodeid, member_list[i].pid);
+    }
+    
+    /* adding joining nodes */
+    for (i = 0; i < joined_list_entries; i++) {
+        clv_group_add(&grph->nodes, joined_list[i].nodeid, joined_list[i].pid);
+    }
+    
+    /* removing leaving nodes */
+    for (i = 0; i < left_list_entries; i++) {
+        clv_group_remove(&grph->nodes, left_list[i].nodeid, left_list[i].pid);
+    }
+}
+
+static cpg_callbacks_t
+        _group_callbacks = {
+            .cpg_deliver_fn = group_cpg_deliver,
+            .cpg_confchg_fn = group_cpg_confchg
+        };
+
+int clv_group_init(clv_group_t *grph, clv_msg_callback_fn_t *msgcb)
+{
     cpg_error_t err;
 
-    err = cpg_initialize(&daemon_handle, cpg_callbacks);
-    if (err != CPG_OK) {
-            log_error("unable to initialize cpg: %d", err);
-            return -1;
+    if (cpg_initialize(&grph->cpg, &_group_callbacks) != CPG_OK) {
+        return -1;
     }
 
-    cpg_fd_get(daemon_handle, &fd);
+    if (cpg_fd_get(grph->cpg, &grph->fd) != CPG_OK) {
+        return -1;
+    }
     
-    if (fd < 0) {
-            log_error("unable to get the cpg file descriptor: %d", err);
-            return -1;
-    }
+    if (grph->fd < 0) return -1; /* invalid file descriptor */
 
-    memset(&daemon_name, 0, sizeof(daemon_name));
-    strcpy(daemon_name.value, CLUVIRT_GROUP_NAME);
-    daemon_name.length = strlen(CLUVIRT_GROUP_NAME);
+    memset(&grph->name, 0, sizeof(struct cpg_name));
+
+    strcpy(grph->name.value, CLUVIRT_GROUP_NAME);
+    grph->name.length = strlen(CLUVIRT_GROUP_NAME);
+
+    STAILQ_INIT(&grph->nodes);
+    grph->msgcb = msgcb;
 
 retry:
-    err = cpg_join(daemon_handle, &daemon_name);
+    err = cpg_join(grph->cpg, &grph->name);
 
     if (err == CPG_ERR_TRY_AGAIN) { 
-        sleep(1);
+        usleep(1000);
         goto retry;
     }
-    if (err != CPG_OK) {
-        log_error("unable to join the cpg group %d", err);
+    else if (err != CPG_OK) {
         goto exit_fail;
     }
     
-    if ((err = cpg_local_get(daemon_handle, &local_nodeid)) != CPG_OK) {
-        log_error("unable to get the local nodeid %d", err);
+    if ((err = cpg_local_get(grph->cpg, &grph->nodeid)) != CPG_OK) {
         goto exit_fail;
     }
 
-    log_debug("cpg file descriptor: %d", fd);
-    return fd;
+    cpg_context_set(grph->cpg, grph);
+
+    return grph->fd;
 
 exit_fail:
-    cpg_finalize(daemon_handle);
+    cpg_finalize(grph->cpg);
     return -1;
 }
 
-unsigned int get_local_nodeid(void)
+int clv_group_dispatch(clv_group_t *grph)
 {
-    return local_nodeid;
+    return (cpg_dispatch(grph->cpg, CPG_DISPATCH_ALL) == CPG_OK) ? 0 : -1;
 }
 
-void dispatch_message(void)
-{
-    if (cpg_dispatch(daemon_handle, CPG_DISPATCH_ALL) != CPG_OK) {
-        log_error("unable to dispatch: %i", errno);
-        /* FIXME: return an error and try to reconnect */
-        exit(EXIT_FAILURE);
-    }
-}
-
-int send_message(void *buf, size_t len)
+int clv_group_message(clv_group_t *grph, void *buf, size_t len)
 {
     struct iovec iov;
     cpg_error_t err;
@@ -109,7 +211,7 @@ int send_message(void *buf, size_t len)
     iov.iov_len = len;
 
 retry: 
-    err = cpg_mcast_joined(daemon_handle, CPG_TYPE_AGREED, &iov, 1);
+    err = cpg_mcast_joined(grph->cpg, CPG_TYPE_AGREED, &iov, 1);
     
     if (err == CPG_ERR_TRY_AGAIN) {
         retries++;

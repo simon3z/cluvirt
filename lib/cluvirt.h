@@ -124,6 +124,10 @@ int clv_get_fd(clv_handle_t *);
 int clv_fetch_vminfo(clv_handle_t *, uint32_t, clv_vminfo_head_t *);
 void *clv_rcv_command(clv_cmd_msg_t *, void *, size_t);
 
+int clv_group_init(clv_group_t *, clv_msg_callback_fn_t *);
+int clv_group_dispatch(clv_group_t *);
+int clv_group_message(clv_group_t *, void *, size_t);
+
 clv_vminfo_t *clv_vminfo_new(const char *);
 void clv_vminfo_free(clv_vminfo_t *);
 
