@@ -112,7 +112,7 @@ ssize_t clv_vminfo_from_msg(
         name_size   = be_swap32(m->payload_size);
         n_offset    = p_offset + sizeof(clv_vminfo_msg_t) + name_size;    
         
-        if ((n_offset > msg_size) ||  (m->payload[name_size] != '\0')) {
+        if ((n_offset > msg_size) ||  (m->payload[name_size - 1] != '\0')) {
             return -1;
         }
         

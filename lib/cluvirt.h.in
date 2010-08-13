@@ -52,9 +52,10 @@ typedef struct __attribute__ ((__packed__)) _clv_vminfo_msg_t {
     uint16_t                    ncpu;
     uint16_t                    vncport;
     uint8_t                     state;
-    uint8_t                     __pad[7]; /* padding */
+    uint8_t                     __pad1; /* padding */
     uint8_t                     uuid[VIR_UUID_BUFLEN];
     uint32_t                    payload_size;
+    uint32_t                    __pad2; /* padding */
     uint8_t                     payload[0];
 } clv_vminfo_msg_t;
 
