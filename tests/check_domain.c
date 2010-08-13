@@ -83,7 +83,7 @@ void domain_test2()
             &di_head, domain_test2_data, sizeof(domain_test2_data)) > 0
     );
     
-    while (v = LIST_FIRST(&di_head)) {
+    while ((v = LIST_FIRST(&di_head)) != 0) {
         LIST_REMOVE(v, next);
         clv_vminfo_free(v);
     }

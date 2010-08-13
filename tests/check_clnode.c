@@ -44,7 +44,7 @@ void clnode_test2()
         STAILQ_INSERT_TAIL(&h, n, next);
     }
     
-    while (n = STAILQ_FIRST(&h)) {
+    while ((n = STAILQ_FIRST(&h)) != 0) {
         STAILQ_REMOVE(&h, n, _clv_clnode_t, next);
         clv_clnode_free(n);    
     }
