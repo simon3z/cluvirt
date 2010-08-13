@@ -57,14 +57,11 @@ static int clv_group_add(
     }
 */
     if ((n = clv_clnode_new(node_host, id, pid)) == 0) {
-        log_error("unable to create new node: %i", errno);
-        exit(EXIT_FAILURE);
+        return -1;
     }
     
     n->status |= CLUSTER_NODE_ONLINE;
     STAILQ_INSERT_TAIL(cn_head, n, next);
-
-    log_debug("adding node '%s', id: %u, pid: %u", n->host, n->id, n->pid);
     
     return 0;
 }
@@ -79,8 +76,6 @@ static int clv_group_remove(
     }
     
     if (n == 0) return -1; /* node not present */
-    
-    log_debug("removing node '%s', id: %u, pid: %u", n->host, n->id, n->pid);
     
     STAILQ_REMOVE(cn_head, n, _clv_clnode_t, next);
     
@@ -205,7 +200,6 @@ int clv_group_message(clv_group_t *grph, void *buf, size_t len)
 {
     struct iovec iov;
     cpg_error_t err;
-    int retries = 0;
 
     iov.iov_base = buf;
     iov.iov_len = len;
@@ -214,17 +208,11 @@ retry:
     err = cpg_mcast_joined(grph->cpg, CPG_TYPE_AGREED, &iov, 1);
     
     if (err == CPG_ERR_TRY_AGAIN) {
-        retries++;
         usleep(1000);
         goto retry;
     }
-    if (err != CPG_OK) {
-        log_error("unable to send message: %d", err);
+    else if (err != CPG_OK) {
         return -1;
-    }
-
-    if (retries) {
-        log_debug("message sent after %d retries", retries);
     }
 
     return 0;
