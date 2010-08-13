@@ -36,6 +36,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <sys/stat.h>
 
 #include <domain.h>
+#include <group.h>
 #include <utils.h>
 
 
@@ -60,7 +61,7 @@ typedef LIST_HEAD(
 
 
 static clv_handle_t _clv_h;
-static clv_group_t  _grp_h;
+static cluvirtd_group_t _grp_h;
 
 static clv_vminfo_head_t   di_head = LIST_HEAD_INITIALIZER(di_head);
 static cluvirtd_client_head_t cl_head = LIST_HEAD_INITIALIZER(cl_head);
@@ -99,7 +100,7 @@ void receive_message(
         /* FIXME: better error handling */
         log_debug("sending domain info: %lu", msg_size);
         
-        clv_group_message(&_grp_h,
+        cluvirtd_group_message(&_grp_h,
                 _clv_h.reply, (size_t) msg_size + sizeof(clv_cmd_msg_t));
     }
     else if (req_cmd.cmd == CLV_CMD_ANSVMINFO) { /* delivering, FIXME: token */
@@ -244,7 +245,7 @@ int dispatch_request(cluvirtd_client_t *cl)
     }
     
     if (n != 0) { /* dispatch to group */
-        clv_group_message(&_grp_h, _clv_h.reply, (size_t) msg_len);
+        cluvirtd_group_message(&_grp_h, _clv_h.reply, (size_t) msg_len);
     }
     else {
         asw_cmd.cmd             = be_swap32(CLV_CMD_ERROR);
@@ -264,7 +265,7 @@ void main_loop(void)
     fd_set          fds_active, fds_status;
     struct timeval  select_timeout;
     
-    if ((fd_grp = clv_group_init(&_grp_h, receive_message)) < 0) {
+    if ((fd_grp = cluvirtd_group_init(&_grp_h, receive_message)) < 0) {
         log_error("unable to initialize group: %i", errno);
         exit(EXIT_FAILURE);
     }
@@ -294,7 +295,7 @@ void main_loop(void)
         lv_update_vminfo(&di_head);
         
         if (FD_ISSET(fd_grp, &fds_status)) { /* dispatching cpg messages */
-            clv_group_dispatch(&_grp_h);
+            cluvirtd_group_dispatch(&_grp_h);
         }
         else if (FD_ISSET(fd_clv, &fds_status)) { /* accepting connections */
             cl = malloc(sizeof(cluvirtd_client_t));

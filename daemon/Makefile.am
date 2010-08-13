@@ -1,11 +1,13 @@
 
 sbin_PROGRAMS = cluvirtd
 noinst_HEADERS = \
-	domain.h
+	domain.h \
+	group.h
 
 cluvirtd_SOURCES = \
 	cluvirtd.c \
-	domain.c
+	domain.c \
+	group.c
 cluvirtd_CPPFLAGS = \
 	-I$(top_srcdir)/utils \
 	-I$(top_srcdir)/lib \

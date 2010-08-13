@@ -30,13 +30,15 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <error.h>
 
 #include <cluvirt.h>
+
+#include <group.h>
 #include <utils.h>
 
 
 #define CLUVIRT_GROUP_NAME      "cluvirtd"
 
 
-static int clv_group_add(
+static int cluvirtd_group_add(
         clv_clnode_head_t *cn_head, uint32_t id, uint32_t pid)
 {
     clv_clnode_t *n;
@@ -66,7 +68,7 @@ static int clv_group_add(
     return 0;
 }
 
-static int clv_group_remove(
+static int cluvirtd_group_remove(
         clv_clnode_head_t *cn_head, uint32_t id, uint32_t pid)
 {
     clv_clnode_t   *n;
@@ -88,7 +90,7 @@ void group_cpg_deliver(cpg_handle_t handle,
         const struct cpg_name *group_name, uint32_t nodeid,
         uint32_t pid, void *msg, size_t msg_len)
 {
-    clv_group_t *grph = 0;
+    cluvirtd_group_t *grph = 0;
     /* clv_cmd_msg_t *c_msg = 0; */
 
     if (cpg_context_get(handle, (void **) &grph) != CPG_OK) {
@@ -119,7 +121,7 @@ void group_cpg_confchg(
         const struct cpg_address *joined_list, size_t joined_list_entries)
 {
     size_t i;
-    clv_group_t *grph;
+    cluvirtd_group_t *grph;
 
     if (cpg_context_get(handle, (void **) &grph) != CPG_OK) {
         return; /* error message */
@@ -127,17 +129,20 @@ void group_cpg_confchg(
     
     /* adding member nodes */
     for (i = 0; i < member_list_entries; i++) {
-        clv_group_add(&grph->nodes, member_list[i].nodeid, member_list[i].pid);
+        cluvirtd_group_add(
+                &grph->nodes, member_list[i].nodeid, member_list[i].pid);
     }
     
     /* adding joining nodes */
     for (i = 0; i < joined_list_entries; i++) {
-        clv_group_add(&grph->nodes, joined_list[i].nodeid, joined_list[i].pid);
+        cluvirtd_group_add(
+                &grph->nodes, joined_list[i].nodeid, joined_list[i].pid);
     }
     
     /* removing leaving nodes */
     for (i = 0; i < left_list_entries; i++) {
-        clv_group_remove(&grph->nodes, left_list[i].nodeid, left_list[i].pid);
+        cluvirtd_group_remove(
+                &grph->nodes, left_list[i].nodeid, left_list[i].pid);
     }
 }
 
@@ -147,7 +152,7 @@ static cpg_callbacks_t
             .cpg_confchg_fn = group_cpg_confchg
         };
 
-int clv_group_init(clv_group_t *grph, clv_msg_callback_fn_t *msgcb)
+int cluvirtd_group_init(cluvirtd_group_t *grph, clv_msg_callback_fn_t *msgcb)
 {
     cpg_error_t err;
 
@@ -193,12 +198,12 @@ exit_fail:
     return -1;
 }
 
-int clv_group_dispatch(clv_group_t *grph)
+int cluvirtd_group_dispatch(cluvirtd_group_t *grph)
 {
     return (cpg_dispatch(grph->cpg, CPG_DISPATCH_ALL) == CPG_OK) ? 0 : -1;
 }
 
-int clv_group_message(clv_group_t *grph, void *buf, size_t len)
+int cluvirtd_group_message(cluvirtd_group_t *grph, void *buf, size_t len)
 {
     struct iovec iov;
     cpg_error_t err;

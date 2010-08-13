@@ -25,7 +25,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <sys/time.h>
 #include <sys/queue.h>
 #include <libvirt/libvirt.h> /* VIR_UUID_BUFLEN */
-#include <@CPG_HEADER_PATH@>
+
 
 typedef struct _clv_vminfo_t {
     int                         id;
@@ -102,27 +102,12 @@ typedef struct _clv_handle_t {
     size_t          reply_len;
 } clv_handle_t;
 
-typedef void clv_msg_callback_fn_t(uint32_t, uint32_t, clv_cmd_msg_t *, size_t);
-
-typedef struct _clv_group_t {
-    int                     fd;
-    cpg_handle_t            cpg;
-    struct cpg_name         name;
-    uint32_t                nodeid;
-    clv_clnode_head_t       nodes;
-    clv_msg_callback_fn_t   *msgcb;
-} clv_group_t;
-
 int clv_init(clv_handle_t *, const char *, int);
 void clv_finish(clv_handle_t *);
 
 int clv_get_fd(clv_handle_t *);
 int clv_fetch_vminfo(clv_handle_t *, uint32_t, clv_vminfo_head_t *);
 void *clv_rcv_command(clv_cmd_msg_t *, void *, size_t);
-
-int clv_group_init(clv_group_t *, clv_msg_callback_fn_t *);
-int clv_group_dispatch(clv_group_t *);
-int clv_group_message(clv_group_t *, void *, size_t);
 
 clv_vminfo_t *clv_vminfo_new(const char *);
 void clv_vminfo_free(clv_vminfo_t *);

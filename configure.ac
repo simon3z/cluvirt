@@ -77,7 +77,6 @@ AC_FUNC_FORK
 AC_CONFIG_FILES([Makefile
                  utils/Makefile
                  lib/Makefile 
-                 lib/cluvirt.h
                  daemon/Makefile 
                  client/Makefile 
                  man/Makefile
