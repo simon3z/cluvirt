@@ -44,9 +44,13 @@ PKG_CHECK_MODULES([virt], [libvirt])
 AC_HEADER_STDC
 AC_CHECK_HEADERS([fcntl.h stdint.h stdlib.h string.h \
                   sys/socket.h sys/time.h syslog.h unistd.h])
-AC_CHECK_HEADERS([corosync/cpg.h],,
-    [AC_CHECK_HEADERS([openais/cpg.h],,
+
+AC_CHECK_HEADERS([corosync/cpg.h],
+    [AC_SUBST([CPG_HEADER_PATH], [corosync/cpg.h])],
+    [AC_CHECK_HEADERS([openais/cpg.h],
+	[AC_SUBST([CPG_HEADER_PATH], [openais/cpg.h])],
         [AC_MSG_ERROR([cpg.h header is missing])])])
+
 AC_CHECK_HEADERS([libcman.h],,
     [AC_MSG_ERROR([libcman.h header is missing])]
 )
@@ -73,6 +77,7 @@ AC_FUNC_FORK
 AC_CONFIG_FILES([Makefile
                  utils/Makefile
                  lib/Makefile 
+                 lib/cluvirt.h
                  daemon/Makefile 
                  client/Makefile 
                  man/Makefile

@@ -20,6 +20,7 @@ Makefile.in
 /daemon/cluvirtd
 /depcomp
 /install-sh
+/lib/cluvirt.h
 /libtool
 /ltmain.sh
 /man/cluvirtadm.8
