@@ -3,8 +3,6 @@ dist_man8_MANS = \
 	cluvirtd.8 \
 	cluvirtadm.8
 
-EXTRA_DIST = $(dist_man8_MANS)
-
 HELP2MAN = help2man
 SUFFIXES = .x .8
 
