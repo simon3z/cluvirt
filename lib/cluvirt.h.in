@@ -101,7 +101,7 @@ typedef struct _clv_handle_t {
     size_t          reply_len;
 } clv_handle_t;
 
-typedef int clv_msg_callback_fn_t(clv_cmd_msg_t *);
+typedef void clv_msg_callback_fn_t(uint32_t, uint32_t, clv_cmd_msg_t *, size_t);
 
 typedef struct _clv_group_t {
     int                     fd;

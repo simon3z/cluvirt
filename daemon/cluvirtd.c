@@ -35,9 +35,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include <group.h>
 #include <domain.h>
-#include <cluster.h>
 #include <utils.h>
 
 
@@ -62,18 +60,17 @@ typedef LIST_HEAD(
 
 
 static clv_handle_t _clv_h;
+static clv_group_t  _grp_h;
 
 static clv_vminfo_head_t   di_head = LIST_HEAD_INITIALIZER(di_head);
-static clv_clnode_head_t   cn_head = STAILQ_HEAD_INITIALIZER(cn_head);
 static cluvirtd_client_head_t cl_head = LIST_HEAD_INITIALIZER(cl_head);
 
 static int cmdline_flags;
 static char *libvirt_uri = 0;
 
 
-void cpg_deliver(cpg_handle_t handle,
-        const struct cpg_name *group_name, uint32_t nodeid,
-        uint32_t pid, void *msg, size_t msg_len)
+void receive_message(
+        uint32_t nodeid, uint32_t pid, clv_cmd_msg_t *msg, size_t msg_len)
 {
     ssize_t         msg_size;
     clv_cmd_msg_t   req_cmd, *asw_cmd;
@@ -83,13 +80,13 @@ void cpg_deliver(cpg_handle_t handle,
         return;
     }
     
-    if (req_cmd.cmd == CLV_CMD_REQVMINFO
-            && req_cmd.nodeid == get_local_nodeid()) { /* request is for us */
+    if ((req_cmd.cmd == CLV_CMD_REQVMINFO)
+            && (req_cmd.nodeid == _grp_h.nodeid)) { /* request is for us */
         asw_cmd         = (clv_cmd_msg_t *) _clv_h.reply;
         
         asw_cmd->cmd    = be_swap32(CLV_CMD_ANSVMINFO);
         asw_cmd->token  = 0; /* FIXME: unused */
-        asw_cmd->nodeid = be_swap32(get_local_nodeid());
+        asw_cmd->nodeid = be_swap32(_grp_h.nodeid);
         asw_cmd->pid    = 0; /* FIXME: unused */
 
         if ((msg_size = clv_vminfo_to_msg(
@@ -102,7 +99,8 @@ void cpg_deliver(cpg_handle_t handle,
         /* FIXME: better error handling */
         log_debug("sending domain info: %lu", msg_size);
         
-        send_message(_clv_h.reply, (size_t) msg_size + sizeof(clv_cmd_msg_t));
+        clv_group_message(&_grp_h,
+                _clv_h.reply, (size_t) msg_size + sizeof(clv_cmd_msg_t));
     }
     else if (req_cmd.cmd == CLV_CMD_ANSVMINFO) { /* delivering, FIXME: token */
         cluvirtd_client_t *cl;
@@ -110,29 +108,6 @@ void cpg_deliver(cpg_handle_t handle,
         LIST_FOREACH(cl, &cl_head, next) {
             write(cl->fd, msg, msg_len);
         }
-    }
-}
-
-void cpg_confchg(cpg_handle_t handle, const struct cpg_name *group_name,
-        const struct cpg_address *member_list, size_t member_list_entries,
-        const struct cpg_address *left_list, size_t left_list_entries,
-        const struct cpg_address *joined_list, size_t joined_list_entries)
-{
-    size_t i;
-    
-    /* adding member nodes */
-    for (i = 0; i < member_list_entries; i++) {
-        group_node_add(&cn_head, member_list[i].nodeid, member_list[i].pid);
-    }
-    
-    /* adding joining nodes */
-    for (i = 0; i < joined_list_entries; i++) {
-        group_node_add(&cn_head, joined_list[i].nodeid, joined_list[i].pid);
-    }
-    
-    /* removing leaving nodes */
-    for (i = 0; i < left_list_entries; i++) {
-        group_node_remove(&cn_head, left_list[i].nodeid, left_list[i].pid);
     }
 }
 
@@ -259,22 +234,22 @@ int dispatch_request(cluvirtd_client_t *cl)
         return 0; /* FIXME: better error handling */
     }
     
-    if (clv_rcv_command(&req_cmd,_clv_h.reply, (size_t) msg_len) == 0) {
+    if (clv_rcv_command(&req_cmd, _clv_h.reply, (size_t) msg_len) == 0) {
         log_error("malformed command from client: %p", cl);
         return 0; /* FIXME: better error handling */
     }
 
-    STAILQ_FOREACH(n, &cn_head, next) { /* FIXME: performances */
+    STAILQ_FOREACH(n, &_grp_h.nodes, next) { /* FIXME: performances */
          if (n->id == req_cmd.nodeid) break;
     }
     
-    if (n != 0) {
-        send_message(_clv_h.reply, (size_t) msg_len); /* dispatch to group */
+    if (n != 0) { /* dispatch to group */
+        clv_group_message(&_grp_h, _clv_h.reply, (size_t) msg_len);
     }
     else {
         asw_cmd.cmd             = be_swap32(CLV_CMD_ERROR);
         asw_cmd.token           = 0;
-        asw_cmd.nodeid          = be_swap32(get_local_nodeid());
+        asw_cmd.nodeid          = be_swap32(_grp_h.nodeid);
         asw_cmd.pid             = 0;
         
         write(cl->fd, &asw_cmd, sizeof(asw_cmd));
@@ -283,18 +258,14 @@ int dispatch_request(cluvirtd_client_t *cl)
     return 0;
 }
 
-static cpg_callbacks_t cpg_callbacks = {
-    .cpg_deliver_fn = cpg_deliver, .cpg_confchg_fn = cpg_confchg
-};
-
 void main_loop(void)
 {
-    int             fd_cpg, fd_clv;
+    int             fd_grp, fd_clv;
     fd_set          fds_active, fds_status;
     struct timeval  select_timeout;
     
-    if ((fd_cpg = setup_cpg(&cpg_callbacks)) < 0) {
-        log_error("unable to initialize openais: %i", errno);
+    if ((fd_grp = clv_group_init(&_grp_h, receive_message)) < 0) {
+        log_error("unable to initialize group: %i", errno);
         exit(EXIT_FAILURE);
     }
     
@@ -306,10 +277,9 @@ void main_loop(void)
     fd_clv = clv_get_fd(&_clv_h);
     
     lv_init(libvirt_uri);
-    group_init();
 
     FD_ZERO(&fds_active);
-    FD_SET(fd_cpg, &fds_active);
+    FD_SET(fd_grp, &fds_active);
     FD_SET(fd_clv, &fds_active);
     
     while (1) {
@@ -323,8 +293,8 @@ void main_loop(void)
 
         lv_update_vminfo(&di_head);
         
-        if (FD_ISSET(fd_cpg, &fds_status)) { /* dispatching cpg messages */
-            dispatch_message();
+        if (FD_ISSET(fd_grp, &fds_status)) { /* dispatching cpg messages */
+            clv_group_dispatch(&_grp_h);
         }
         else if (FD_ISSET(fd_clv, &fds_status)) { /* accepting connections */
             cl = malloc(sizeof(cluvirtd_client_t));

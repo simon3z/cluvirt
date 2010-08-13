@@ -89,7 +89,7 @@ void group_cpg_deliver(cpg_handle_t handle,
         uint32_t pid, void *msg, size_t msg_len)
 {
     clv_group_t *grph = 0;
-    clv_cmd_msg_t *c_msg = 0;
+    /* clv_cmd_msg_t *c_msg = 0; */
 
     if (cpg_context_get(handle, (void **) &grph) != CPG_OK) {
         return; /* TODO: error? */
@@ -99,6 +99,7 @@ void group_cpg_deliver(cpg_handle_t handle,
         return; /* TODO: error? */
     }
 
+    /* FIXME: move endianness here
     c_msg = msg;
 
     c_msg->cmd          = be_swap32(c_msg->cmd);
@@ -106,8 +107,9 @@ void group_cpg_deliver(cpg_handle_t handle,
     c_msg->nodeid       = be_swap32(c_msg->nodeid);
     c_msg->pid          = be_swap32(c_msg->pid);
     c_msg->payload_size = be_swap32(c_msg->payload_size);
+    */
 
-    grph->msgcb(c_msg);
+    grph->msgcb(nodeid, pid, msg, msg_len);
 }
 
 void group_cpg_confchg(
