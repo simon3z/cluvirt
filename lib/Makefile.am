@@ -1,6 +1,6 @@
 
 lib_LTLIBRARIES = libcluvirt.la
-include_HEADERS = cluvirt.h
+nodist_include_HEADERS = cluvirt.h
 
 libcluvirt_la_SOURCES = \
 	libcluvirt.c \

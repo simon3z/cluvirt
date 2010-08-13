@@ -25,12 +25,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <sys/time.h>
 #include <sys/queue.h>
 #include <libvirt/libvirt.h> /* VIR_UUID_BUFLEN */
-
-#ifdef HAVE_COROSYNC_CPG_H
-#include <corosync/cpg.h>
-#else
-#include <openais/cpg.h>
-#endif
+#include <@CPG_HEADER_PATH@>
 
 typedef struct _clv_vminfo_t {
     int                         id;
