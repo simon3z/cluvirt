@@ -76,6 +76,8 @@ int member_init_list()
     cman_nodes = calloc((size_t) node_count, sizeof(cman_node_t));
     cman_get_nodes(handle, node_count, &node_count, cman_nodes);
     
+    local_node.cn_name[0] = '\0'; /* init cn_name for cman_get_node */
+
     if (cman_get_node(handle, CMAN_NODEID_US, &local_node) != 0) {
         log_error("unable to get local node: %i", errno);
         return -1;
