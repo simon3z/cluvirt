@@ -297,7 +297,7 @@ int main_loop(void)
     
     member_init_list();
  
-    if (clv_init(&clvh, CLV_SOCKET, CLV_INIT_CLIENT) != 0) {
+    if (clv_init(&clvh, CLV_SOCKET_PATH) < 0) {
         log_error("unable to initialize cluvirt socket: %i", errno);
         exit(EXIT_FAILURE);
     }

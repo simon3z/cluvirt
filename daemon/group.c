@@ -90,26 +90,23 @@ void group_cpg_deliver(cpg_handle_t handle,
         const struct cpg_name *group_name, uint32_t nodeid,
         uint32_t pid, void *msg, size_t msg_len)
 {
+    clv_cmd_msg_t *cmd_msg;
     cluvirtd_group_t *grph = 0;
-    /* clv_cmd_msg_t *c_msg = 0; */
 
     if (cpg_context_get(handle, (void **) &grph) != CPG_OK) {
-        return; /* TODO: error? */
+        return;
     }
 
-    if (msg_len < sizeof(clv_cmd_msg_t)) {
-        return; /* TODO: error? */
+    if (msg_len < sizeof(clv_cmd_msg_t)) { /* message too short */
+        return;
     }
 
-    /* FIXME: move endianness here
-    c_msg = msg;
+    cmd_msg = msg;
+    clv_cmd_endian_convert(cmd_msg);
 
-    c_msg->cmd          = be_swap32(c_msg->cmd);
-    c_msg->token        = be_swap32(c_msg->token);
-    c_msg->nodeid       = be_swap32(c_msg->nodeid);
-    c_msg->pid          = be_swap32(c_msg->pid);
-    c_msg->payload_size = be_swap32(c_msg->payload_size);
-    */
+    if (cmd_msg->payload_size != msg_len - sizeof(clv_cmd_msg_t)) {
+        return;
+    }
 
     grph->msgcb(nodeid, pid, msg, msg_len);
 }
@@ -203,13 +200,16 @@ int cluvirtd_group_dispatch(cluvirtd_group_t *grph)
     return (cpg_dispatch(grph->cpg, CPG_DISPATCH_ALL) == CPG_OK) ? 0 : -1;
 }
 
-int cluvirtd_group_message(cluvirtd_group_t *grph, void *buf, size_t len)
+int cluvirtd_group_message(cluvirtd_group_t *grph, clv_cmd_msg_t *msg)
 {
     struct iovec iov;
     cpg_error_t err;
 
-    iov.iov_base = buf;
-    iov.iov_len = len;
+    iov.iov_len     = sizeof(clv_cmd_msg_t) + msg->payload_size;
+    iov.iov_base    = alloca(iov.iov_len);
+
+    memcpy(iov.iov_base, msg, iov.iov_len);
+    clv_cmd_endian_convert((clv_cmd_msg_t *) iov.iov_base);
 
 retry: 
     err = cpg_mcast_joined(grph->cpg, CPG_TYPE_AGREED, &iov, 1);

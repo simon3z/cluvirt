@@ -60,7 +60,6 @@ typedef LIST_HEAD(
 #define CMDLINE_OPT_DAEMON      0x0008
 
 
-static clv_handle_t _clv_h;
 static cluvirtd_group_t _grp_h;
 
 static clv_vminfo_head_t   di_head = LIST_HEAD_INITIALIZER(di_head);
@@ -74,40 +73,35 @@ void receive_message(
         uint32_t nodeid, uint32_t pid, clv_cmd_msg_t *msg, size_t msg_len)
 {
     ssize_t         msg_size;
-    clv_cmd_msg_t   req_cmd, *asw_cmd;
+    clv_cmd_msg_t   *asw_cmd;
 
-    if (clv_rcv_command(&req_cmd, msg, msg_len) == 0) {
-        log_error("malformed command from %u:%u", nodeid, pid);
-        return;
-    }
-    
-    if ((req_cmd.cmd == CLV_CMD_REQVMINFO)
-            && (req_cmd.nodeid == _grp_h.nodeid)) { /* request is for us */
-        asw_cmd         = (clv_cmd_msg_t *) _clv_h.reply;
-        
-        asw_cmd->cmd    = be_swap32(CLV_CMD_ANSVMINFO);
-        asw_cmd->token  = 0; /* FIXME: unused */
-        asw_cmd->nodeid = be_swap32(_grp_h.nodeid);
-        asw_cmd->pid    = 0; /* FIXME: unused */
+    if ((msg->cmd == CLV_CMD_VMINFO)
+            && (msg->nodeid == _grp_h.nodeid)) { /* request is for us */
+        asw_cmd = alloca(CLV_CMD_MSG_MAXSIZE);
+
+        memset(asw_cmd, 0, sizeof(clv_cmd_msg_t));
+
+        asw_cmd->cmd    = CLV_CMD_VMINFO | CLV_CMD_REPLYMASK;
+        asw_cmd->nodeid = _grp_h.nodeid;
 
         if ((msg_size = clv_vminfo_to_msg(
-                        &di_head, _clv_h.reply + sizeof(clv_cmd_msg_t),
-                        _clv_h.reply_len - sizeof(clv_cmd_msg_t))) < 0) {
+                &di_head, asw_cmd->payload, CLV_CMD_PAYLOAD_MAXSIZE)) < 0) {
             log_error("unable to prepare domain status message");
             return;
         }
 
         /* FIXME: better error handling */
         log_debug("sending domain info: %lu", msg_size);
+
+        asw_cmd->payload_size = (uint32_t) msg_size;
         
-        cluvirtd_group_message(&_grp_h,
-                _clv_h.reply, (size_t) msg_size + sizeof(clv_cmd_msg_t));
+        cluvirtd_group_message(&_grp_h, asw_cmd);
     }
-    else if (req_cmd.cmd == CLV_CMD_ANSVMINFO) { /* delivering, FIXME: token */
+    else if (msg->cmd == (CLV_CMD_VMINFO | CLV_CMD_REPLYMASK)) {
         cluvirtd_client_t *cl;
         
         LIST_FOREACH(cl, &cl_head, next) {
-            write(cl->fd, msg, msg_len);
+            clv_cmd_write(cl->fd, msg);
         }
     }
 }
@@ -221,39 +215,35 @@ void cmdline_options(int argc, char *argv[])
 
 int dispatch_request(cluvirtd_client_t *cl)
 {
-    clv_cmd_msg_t   req_cmd, asw_cmd;
+    clv_cmd_msg_t   *cmd_msg;
     clv_clnode_t    *n;
     ssize_t         msg_len;
     
-    msg_len = read(cl->fd, _clv_h.reply, _clv_h.reply_len);
-
+    cmd_msg = alloca(CLV_CMD_MSG_MAXSIZE);
+    msg_len = clv_cmd_read(cl->fd, cmd_msg, CLV_CMD_MSG_MAXSIZE);
+    
     if (msg_len == 0) {
         return -1; /* client disconnection */
     }
     else if (msg_len < 0) {
-        log_error("error reading from client");
-        return 0; /* FIXME: better error handling */
-    }
-    
-    if (clv_rcv_command(&req_cmd, _clv_h.reply, (size_t) msg_len) == 0) {
-        log_error("malformed command from client: %p", cl);
-        return 0; /* FIXME: better error handling */
+        log_error("error reading request from client: %p", cl);
+        return -1; /* read error */
     }
 
     STAILQ_FOREACH(n, &_grp_h.nodes, next) { /* FIXME: performances */
-         if (n->id == req_cmd.nodeid) break;
+         if (n->id == cmd_msg->nodeid) break;
     }
     
     if (n != 0) { /* dispatch to group */
-        cluvirtd_group_message(&_grp_h, _clv_h.reply, (size_t) msg_len);
+        cluvirtd_group_message(&_grp_h, cmd_msg);
     }
     else {
-        asw_cmd.cmd             = be_swap32(CLV_CMD_ERROR);
-        asw_cmd.token           = 0;
-        asw_cmd.nodeid          = be_swap32(_grp_h.nodeid);
-        asw_cmd.pid             = 0;
+        memset(cmd_msg, 0, sizeof(clv_cmd_msg_t));
+
+        cmd_msg->cmd    = CLV_CMD_ERROR;
+        cmd_msg->nodeid = _grp_h.nodeid;
         
-        write(cl->fd, &asw_cmd, sizeof(asw_cmd));
+        clv_cmd_write(cl->fd, cmd_msg);
     }
     
     return 0;
@@ -270,13 +260,11 @@ void main_loop(void)
         exit(EXIT_FAILURE);
     }
     
-    if (clv_init(&_clv_h, CLV_SOCKET, CLV_INIT_SERVER) != 0) {
+    if ((fd_clv = clv_make_socket(CLV_SOCKET_PATH, CLV_SOCKET_SERVER)) < 0) {
         log_error("unable to initialize cluvirt socket: %i", errno);
         exit(EXIT_FAILURE);
     }
-    
-    fd_clv = clv_get_fd(&_clv_h);
-    
+
     lv_init(libvirt_uri);
 
     FD_ZERO(&fds_active);

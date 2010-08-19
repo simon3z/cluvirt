@@ -62,7 +62,7 @@ void clv_vminfo_free(clv_vminfo_t *d)
 }
 
 ssize_t clv_vminfo_to_msg(
-        clv_vminfo_head_t *di_head, char *msg, size_t max_size)
+        clv_vminfo_head_t *di_head, void *msg, size_t max_size)
 {
     clv_vminfo_t       *d;
     clv_vminfo_msg_t   *m;
@@ -100,7 +100,7 @@ ssize_t clv_vminfo_to_msg(
 }
 
 ssize_t clv_vminfo_from_msg(
-        clv_vminfo_head_t *di_head, char *msg, size_t msg_size)
+        clv_vminfo_head_t *di_head, void *msg, size_t msg_size)
 {
     clv_vminfo_t        *d;
     clv_vminfo_msg_t    *m;

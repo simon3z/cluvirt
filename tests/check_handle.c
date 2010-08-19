@@ -30,11 +30,13 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 void handle_test1()
 {
-    clv_handle_t clvh;
+    int sock;
     
-    chkutils_check(clv_init(&clvh, TMPSOCKPATH, CLV_INIT_SERVER) == 0);
+    chkutils_check(
+            (sock = clv_make_socket(TMPSOCKPATH, CLV_SOCKET_SERVER)) >= 0
+    );
     
-    clv_finish(&clvh);
+    close(sock);
     
     chkutils_check(unlink(TMPSOCKPATH) == 0);
 }

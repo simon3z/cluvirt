@@ -74,10 +74,12 @@ typedef struct _clv_clnode_t {
 typedef STAILQ_HEAD(_clv_clnode_head_t, _clv_clnode_t) clv_clnode_head_t;
 
 #define CLV_CMD_ERROR           0xffffffff
-#define CLV_CMD_REQVMINFO       0x00000001
-#define CLV_CMD_ANSVMINFO       0xff000001
-#define CLV_CMD_REQDESTROYVM    0x00000002
-#define CLV_CMD_ANSDESTROYVM    0xff000002
+#define CLV_CMD_REPLYMASK       0xff000000
+#define CLV_CMD_VMINFO          0x00000001
+#define CLV_CMD_DESTROYVM       0x00000002
+
+#define CLV_CMD_MSG_MAXSIZE     (1024)
+#define CLV_CMD_PAYLOAD_MAXSIZE (CLV_CMD_MSG_MAXSIZE - sizeof(clv_cmd_msg_t))
 
 /* big-endian structure */
 typedef struct __attribute__ ((__packed__)) _clv_cmd_msg_t {
@@ -90,32 +92,46 @@ typedef struct __attribute__ ((__packed__)) _clv_cmd_msg_t {
     uint8_t         payload[0];
 } clv_cmd_msg_t;
 
-#define CLV_INIT_CLIENT     0x00
-#define CLV_INIT_SERVER     0x01
-#define CLV_SOCKET          "/var/run/cluvirt.sock"
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+#define clv_cmd_endian_convert(msg) ({  \
+    (msg)->cmd          = bswap_32((msg)->cmd);             \
+    (msg)->token        = bswap_32((msg)->token);           \
+    (msg)->nodeid       = bswap_32((msg)->nodeid);          \
+    (msg)->pid          = bswap_32((msg)->pid);             \
+    (msg)->payload_size = bswap_32((msg)->payload_size);    \
+})
+#else
+#define clv_cmd_endian_convert(msg)
+#endif
+
+#define CLV_SOCKET_CLIENT   0x00
+#define CLV_SOCKET_SERVER   0x01
+#define CLV_SOCKET_PATH     "/var/run/cluvirt.sock"
 
 typedef struct _clv_handle_t {
     int             fd;
     long            to_sec;
     long            to_usec;
-    void            *reply;
-    size_t          reply_len;
 } clv_handle_t;
 
-int clv_init(clv_handle_t *, const char *, int);
+int clv_make_socket(const char *, int);
+
+int clv_init(clv_handle_t *, const char *);
 void clv_finish(clv_handle_t *);
+
+ssize_t clv_cmd_read(int, clv_cmd_msg_t *, size_t);
+ssize_t clv_cmd_write(int, clv_cmd_msg_t *);
 
 int clv_get_fd(clv_handle_t *);
 int clv_fetch_vminfo(clv_handle_t *, uint32_t, clv_vminfo_head_t *);
-void *clv_rcv_command(clv_cmd_msg_t *, void *, size_t);
 
 clv_vminfo_t *clv_vminfo_new(const char *);
 void clv_vminfo_free(clv_vminfo_t *);
 
 int clv_vminfo_set_name(clv_vminfo_t *, const char *);
 
-ssize_t clv_vminfo_to_msg(clv_vminfo_head_t *, char *, size_t);
-ssize_t clv_vminfo_from_msg(clv_vminfo_head_t *, char *, size_t);
+ssize_t clv_vminfo_to_msg(clv_vminfo_head_t *, void *, size_t);
+ssize_t clv_vminfo_from_msg(clv_vminfo_head_t *, void *, size_t);
 
 clv_clnode_t *clv_clnode_new(const char *, uint32_t, uint32_t);
 void clv_clnode_free(clv_clnode_t *);

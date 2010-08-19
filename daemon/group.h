@@ -39,6 +39,6 @@ typedef struct _cluvirtd_group_t {
 
 int cluvirtd_group_init(cluvirtd_group_t *, clv_msg_callback_fn_t *);
 int cluvirtd_group_dispatch(cluvirtd_group_t *);
-int cluvirtd_group_message(cluvirtd_group_t *, void *, size_t);
+int cluvirtd_group_message(cluvirtd_group_t *, clv_cmd_msg_t *);
 
 #endif

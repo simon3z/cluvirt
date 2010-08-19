@@ -33,10 +33,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <utils.h>
 
 
-#define CLV_BUFFER_DEFSIZE      8192
-
-
-int clv_init(clv_handle_t *clvh, const char *filename, int mode)
+int clv_make_socket(const char *filename, int mode)
 {
     int sock;
     struct sockaddr_un name;
@@ -50,7 +47,7 @@ int clv_init(clv_handle_t *clvh, const char *filename, int mode)
     name.sun_family = AF_UNIX;
     strncpy(name.sun_path, filename, sizeof(name.sun_path) - 1);
     
-    if (mode == CLV_INIT_SERVER) {
+    if (mode == CLV_SOCKET_SERVER) {
         unlink(filename);
         
         if (bind(sock, (struct sockaddr *) &name, sizeof (name)) != 0)  {
@@ -66,25 +63,29 @@ int clv_init(clv_handle_t *clvh, const char *filename, int mode)
              goto exit_fail;
         }
     }
-    
-    clvh->fd        = sock;
-    clvh->to_sec    = 5;
-    clvh->to_usec   = 0;
-    clvh->reply     = malloc(CLV_BUFFER_DEFSIZE);
-    clvh->reply_len = CLV_BUFFER_DEFSIZE;
-    
-    return 0;
-    
+
+    return sock;
+
 exit_fail:
     close(sock);
     return -1;
 }
 
+int clv_init(clv_handle_t *clvh, const char *filename)
+{
+    if ((clvh->fd = clv_make_socket(filename, CLV_SOCKET_CLIENT)) < 0) {
+        return -1;
+    }
+
+    clvh->to_sec    = 5; /* default timeout: 5 seconds */
+    clvh->to_usec   = 0;
+    
+    return 0;
+}
+
 void clv_finish(clv_handle_t *clvh)
 {
     close(clvh->fd);
-    free(clvh->reply);
-    clvh->reply_len = 0;
 }
 
 int clv_get_fd(clv_handle_t *clvh)
@@ -92,24 +93,47 @@ int clv_get_fd(clv_handle_t *clvh)
     return clvh->fd;
 }
 
-void *clv_rcv_command(clv_cmd_msg_t *rcv_cmd, void *msg, size_t msg_len)
+ssize_t clv_cmd_read(int fd, clv_cmd_msg_t *msg, size_t maxlen)
 {
-    clv_cmd_msg_t *tmp_cmd = msg;
-    
-    if (msg_len < sizeof(clv_cmd_msg_t)) {
-        return 0;
+    ssize_t read_len;
+
+    read_len = read(fd, msg, maxlen);
+
+    /* checking message length */
+    if (read_len == 0) return 0;
+    else if (read_len < sizeof(clv_cmd_msg_t)) {
+        return -1;
     }
-    
-    rcv_cmd->cmd            = be_swap32(tmp_cmd->cmd);
-    rcv_cmd->token          = be_swap32(tmp_cmd->token);
-    rcv_cmd->nodeid         = be_swap32(tmp_cmd->nodeid);
-    rcv_cmd->pid            = be_swap32(tmp_cmd->pid);
-    rcv_cmd->payload_size   = be_swap32(tmp_cmd->payload_size);
-    
-    return msg + sizeof(clv_cmd_msg_t);
+
+    /* checking payload length */
+    if (msg->payload_size != ((size_t) read_len - sizeof(clv_cmd_msg_t))) {
+        return -1;
+    }
+
+    /* clv_cmd_endian_convert(msg); */
+
+    return read_len;
 }
 
-ssize_t clv_wait_reply(clv_handle_t *clvh)
+ssize_t clv_cmd_write(int fd, clv_cmd_msg_t *msg)
+{
+    size_t cmd_len;
+    ssize_t write_len;
+
+    cmd_len = sizeof(clv_cmd_msg_t) + msg->payload_size;
+
+    /* clv_cmd_endian_convert(msg); */
+
+    write_len = write(fd, msg, cmd_len); /* sending request */
+    
+    if (write_len != cmd_len) {
+        return -1; /* error sending request */
+    };
+
+    return write_len;
+}
+
+ssize_t clv_cmd_wait(clv_handle_t *clvh, clv_cmd_msg_t *msg, size_t maxlen)
 {
     int fd_max;
     fd_set fds_read;
@@ -126,45 +150,43 @@ ssize_t clv_wait_reply(clv_handle_t *clvh)
     if (select(fd_max, &fds_read, 0, 0, &read_to) < 0) {
         return -1;
     }
-    
+
     if (FD_ISSET(clvh->fd, &fds_read)) {
-        return read(clvh->fd, clvh->reply, clvh->reply_len);
+        return clv_cmd_read(clvh->fd, msg, maxlen);
     }
-    
-    return 0;
+
+    return -1;
 }
 
 int clv_fetch_vminfo(
         clv_handle_t *clvh, uint32_t nodeid, clv_vminfo_head_t *di_head)
 {
     ssize_t msg_len;
-    clv_cmd_msg_t req_cmd;
+    clv_cmd_msg_t req_cmd, *asw_cmd;
     
-    req_cmd.cmd     = be_swap32(CLV_CMD_REQVMINFO);
-    req_cmd.token   = be_swap32(0); /* FIXME: unused */
-    req_cmd.nodeid  = be_swap32(nodeid);
-    req_cmd.pid     = be_swap32(0); /* FIXME: unused */
+    asw_cmd = alloca(CLV_CMD_MSG_MAXSIZE);
+
+    memset(&req_cmd, 0, sizeof(clv_cmd_msg_t));
+
+    req_cmd.cmd     = CLV_CMD_VMINFO;
+    req_cmd.nodeid  = nodeid;
     
-    msg_len = write(clvh->fd, &req_cmd, sizeof(req_cmd)); /* sending request */
-    
-    if (msg_len != sizeof(req_cmd)) {
+    if ((clv_cmd_write(clvh->fd, &req_cmd)) < 0) {
         return -1; /* error sending request */
     };
     
-    if ((msg_len = clv_wait_reply(clvh)) > 0) { /* waiting response */
-        clv_cmd_msg_t   asw_cmd;
-        
-        if (clv_rcv_command(&asw_cmd, clvh->reply, (size_t) msg_len) == 0) {
-            return -1;
-        }
-        
-        if (asw_cmd.cmd != CLV_CMD_ANSVMINFO || asw_cmd.nodeid != nodeid) {
+    if ((msg_len = clv_cmd_wait(clvh, asw_cmd, CLV_CMD_MSG_MAXSIZE)) < 0) {
+        return -1; /* error waiting response */
+    }
+
+    if (msg_len > 0) {
+        if (asw_cmd->cmd != (CLV_CMD_VMINFO | CLV_CMD_REPLYMASK)
+                || asw_cmd->nodeid != nodeid) {
             return -1; /* FIXME: improve error handling */
         }
         
-        if (clv_vminfo_from_msg(di_head,
-                (char *) clvh->reply + sizeof(clv_cmd_msg_t),
-                (size_t) msg_len - sizeof(clv_cmd_msg_t)) < 0) {
+        if (clv_vminfo_from_msg(
+                di_head, asw_cmd->payload, asw_cmd->payload_size) < 0) {
             return -1;
         }
     }
