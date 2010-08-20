@@ -20,17 +20,17 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #ifndef __CLUVIRT_H_
 #define __CLUVIRT_H_
 
-
 #include <stdint.h>
 #include <sys/time.h>
 #include <sys/queue.h>
-#include <libvirt/libvirt.h> /* VIR_UUID_BUFLEN */
 
+#define CLUVIRT_UUID_BUFLEN         (16)
+#define CLUVIRT_UUID_STRING_BUFLEN  (36+1)
 
 typedef struct _clv_vminfo_t {
     int                         id;
     char                        *name;
-    unsigned char               uuid[VIR_UUID_BUFLEN];
+    unsigned char               uuid[CLUVIRT_UUID_BUFLEN];
     unsigned char               state;
     unsigned long               memory;
     unsigned short              ncpu;
@@ -53,7 +53,7 @@ typedef struct __attribute__ ((__packed__)) _clv_vminfo_msg_t {
     uint16_t                    vncport;
     uint8_t                     state;
     uint8_t                     __pad1; /* padding */
-    uint8_t                     uuid[VIR_UUID_BUFLEN];
+    uint8_t                     uuid[CLUVIRT_UUID_BUFLEN];
     uint32_t                    payload_size;
     uint32_t                    __pad2; /* padding */
     uint8_t                     payload[0];

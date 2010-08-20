@@ -31,9 +31,15 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include <libxml/parser.h>
 #include <libxml/xpath.h>
+#include <libvirt/libvirt.h>
 
 #include <domain.h>
 #include <utils.h>
+
+
+#if CLUVIRT_UUID_BUFLEN != VIR_UUID_BUFLEN
+#error cluvirt uuid buffer size mismatch (check your libvirt version)
+#endif
 
 
 #define XPATH_VNC_PORT          \
@@ -174,7 +180,7 @@ int lv_update_vminfo(clv_vminfo_head_t *di_head)
             d->id           = id[i];
 
             if (virDomainGetUUID(lv_domain, d->uuid) < 0) {
-                memset(d->uuid, 0, VIR_UUID_BUFLEN);
+                memset(d->uuid, 0, CLUVIRT_UUID_BUFLEN);
                 log_error("unable to get domain uuid %i", id[i]);
             }
 
