@@ -74,12 +74,12 @@ typedef struct _clv_clnode_t {
 typedef STAILQ_HEAD(_clv_clnode_head_t, _clv_clnode_t) clv_clnode_head_t;
 
 #define CLV_CMD_ERROR           0xffffffff
-#define CLV_CMD_REPLYMASK       0xff000000
+#define CLV_CMD_REPLY           0xff000000 /* reply mask */
 #define CLV_CMD_VMINFO          0x00000001
 #define CLV_CMD_DESTROYVM       0x00000002
 
 #define CLV_CMD_MSG_MAXSIZE     (1024)
-#define CLV_CMD_PAYLOAD_MAXSIZE (CLV_CMD_MSG_MAXSIZE - sizeof(clv_cmd_msg_t))
+#define CLV_CMD_DATA_MAXSIZE    (CLV_CMD_MSG_MAXSIZE - sizeof(clv_cmd_msg_t))
 
 /* big-endian structure */
 typedef struct __attribute__ ((__packed__)) _clv_cmd_msg_t {
@@ -88,8 +88,8 @@ typedef struct __attribute__ ((__packed__)) _clv_cmd_msg_t {
     uint32_t        nodeid;
     uint32_t        pid;
     uint32_t        __pad;
-    uint32_t        payload_size;
-    uint8_t         payload[0];
+    uint32_t        data_size;
+    uint8_t         data[0];
 } clv_cmd_msg_t;
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
@@ -98,7 +98,7 @@ typedef struct __attribute__ ((__packed__)) _clv_cmd_msg_t {
     (msg)->token        = bswap_32((msg)->token);           \
     (msg)->nodeid       = bswap_32((msg)->nodeid);          \
     (msg)->pid          = bswap_32((msg)->pid);             \
-    (msg)->payload_size = bswap_32((msg)->payload_size);    \
+    (msg)->data_size    = bswap_32((msg)->data_size);       \
 })
 #else
 #define clv_cmd_endian_convert(msg)

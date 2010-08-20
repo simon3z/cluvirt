@@ -81,11 +81,11 @@ void receive_message(
 
         memset(asw_cmd, 0, sizeof(clv_cmd_msg_t));
 
-        asw_cmd->cmd    = CLV_CMD_VMINFO | CLV_CMD_REPLYMASK;
+        asw_cmd->cmd    = CLV_CMD_VMINFO | CLV_CMD_REPLY;
         asw_cmd->nodeid = _grp_h.nodeid;
 
         if ((msg_size = clv_vminfo_to_msg(
-                &di_head, asw_cmd->payload, CLV_CMD_PAYLOAD_MAXSIZE)) < 0) {
+                &di_head, asw_cmd->data, CLV_CMD_DATA_MAXSIZE)) < 0) {
             log_error("unable to prepare domain status message");
             return;
         }
@@ -93,11 +93,11 @@ void receive_message(
         /* FIXME: better error handling */
         log_debug("sending domain info: %lu", msg_size);
 
-        asw_cmd->payload_size = (uint32_t) msg_size;
+        asw_cmd->data_size = (uint32_t) msg_size;
         
         cluvirtd_group_message(&_grp_h, asw_cmd);
     }
-    else if (msg->cmd == (CLV_CMD_VMINFO | CLV_CMD_REPLYMASK)) {
+    else if (msg->cmd == (CLV_CMD_VMINFO | CLV_CMD_REPLY)) {
         cluvirtd_client_t *cl;
         
         LIST_FOREACH(cl, &cl_head, next) {

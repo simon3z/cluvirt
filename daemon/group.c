@@ -104,7 +104,7 @@ void group_cpg_deliver(cpg_handle_t handle,
     cmd_msg = msg;
     clv_cmd_endian_convert(cmd_msg);
 
-    if (cmd_msg->payload_size != msg_len - sizeof(clv_cmd_msg_t)) {
+    if (cmd_msg->data_size != msg_len - sizeof(clv_cmd_msg_t)) {
         return;
     }
 
@@ -205,7 +205,7 @@ int cluvirtd_group_message(cluvirtd_group_t *grph, clv_cmd_msg_t *msg)
     struct iovec iov;
     cpg_error_t err;
 
-    iov.iov_len     = sizeof(clv_cmd_msg_t) + msg->payload_size;
+    iov.iov_len     = sizeof(clv_cmd_msg_t) + msg->data_size;
     iov.iov_base    = alloca(iov.iov_len);
 
     memcpy(iov.iov_base, msg, iov.iov_len);

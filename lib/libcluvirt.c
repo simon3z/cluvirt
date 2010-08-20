@@ -105,8 +105,8 @@ ssize_t clv_cmd_read(int fd, clv_cmd_msg_t *msg, size_t maxlen)
         return -1;
     }
 
-    /* checking payload length */
-    if (msg->payload_size != ((size_t) read_len - sizeof(clv_cmd_msg_t))) {
+    /* checking data length */
+    if (msg->data_size != ((size_t) read_len - sizeof(clv_cmd_msg_t))) {
         return -1;
     }
 
@@ -120,7 +120,7 @@ ssize_t clv_cmd_write(int fd, clv_cmd_msg_t *msg)
     size_t cmd_len;
     ssize_t write_len;
 
-    cmd_len = sizeof(clv_cmd_msg_t) + msg->payload_size;
+    cmd_len = sizeof(clv_cmd_msg_t) + msg->data_size;
 
     /* clv_cmd_endian_convert(msg); */
 
@@ -180,13 +180,13 @@ int clv_fetch_vminfo(
     }
 
     if (msg_len > 0) {
-        if (asw_cmd->cmd != (CLV_CMD_VMINFO | CLV_CMD_REPLYMASK)
+        if (asw_cmd->cmd != (CLV_CMD_VMINFO | CLV_CMD_REPLY)
                 || asw_cmd->nodeid != nodeid) {
             return -1; /* FIXME: improve error handling */
         }
         
         if (clv_vminfo_from_msg(
-                di_head, asw_cmd->payload, asw_cmd->payload_size) < 0) {
+                di_head, asw_cmd->data, asw_cmd->data_size) < 0) {
             return -1;
         }
     }
