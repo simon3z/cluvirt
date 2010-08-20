@@ -35,9 +35,9 @@ Building the tarball:
 
   $ make dist-gzip
 
-Building the rpms (from the tarball):
+Building the rpms:
 
-  $ rpmbuild -ta cluvirt-<version>.tar.gz
+  $ make rpmbuild
 
 Install Instructions
 ====================
