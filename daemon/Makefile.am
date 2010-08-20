@@ -14,8 +14,8 @@ cluvirtd_CPPFLAGS = \
 	$(xml_CFLAGS) \
 	$(virt_CFLAGS)
 cluvirtd_LDADD = \
-	$(top_srcdir)/utils/libutils.a \
-	$(top_srcdir)/lib/libcluvirt.la \
+	../utils/libutils.a \
+	../lib/libcluvirt.la \
 	$(xml_LIBS) \
 	$(virt_LIBS)
 

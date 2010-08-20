@@ -6,6 +6,6 @@ cluvirtadm_CPPFLAGS = \
 	-I$(top_srcdir)/utils \
 	-I$(top_srcdir)/lib
 cluvirtadm_LDADD = \
-	$(top_srcdir)/utils/libutils.a \
-	$(top_srcdir)/lib/libcluvirt.la
+	../utils/libutils.a \
+	../lib/libcluvirt.la
 

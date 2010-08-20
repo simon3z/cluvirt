@@ -16,11 +16,11 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/lib
 
 check_domain_SOURCES = check_domain.c
-check_domain_LDADD = $(top_srcdir)/lib/libcluvirt.la
+check_domain_LDADD = ../lib/libcluvirt.la
 
 check_clnode_SOURCES = check_clnode.c
-check_clnode_LDADD = $(top_srcdir)/lib/libcluvirt.la
+check_clnode_LDADD = ../lib/libcluvirt.la
 
 check_handle_SOURCES = check_handle.c
-check_handle_LDADD = $(top_srcdir)/lib/libcluvirt.la
+check_handle_LDADD = ../lib/libcluvirt.la
 
