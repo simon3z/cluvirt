@@ -27,13 +27,16 @@ fi
 # Checks for libraries.
 LDFLAGS="$LDFLAGS -L${libdir}/openais"
 AC_CHECK_LIB([pthread], [pthread_create],,
-    [AC_MSG_ERROR([libpthread is missing])]
+    [AC_MSG_ERROR([libpthread library is missing])]
 )
 AC_CHECK_LIB([cpg], [cpg_initialize],,
-    [AC_MSG_ERROR([libcpg is missing])]
+    [AC_MSG_ERROR([libcpg library is missing])]
 )
 AC_CHECK_LIB([cman], [cman_init],,
-    [AC_MSG_ERROR([libcman is missing])]
+    [AC_MSG_ERROR([libcman library is missing])]
+)
+AC_CHECK_LIB([readline], [readline],,
+    [AC_MSG_ERROR([readline library is missing])]
 )
 
 # Checks for pkg-config modules.
@@ -44,6 +47,10 @@ PKG_CHECK_MODULES([virt], [libvirt])
 AC_HEADER_STDC
 AC_CHECK_HEADERS([fcntl.h stdint.h stdlib.h string.h \
                   sys/socket.h sys/time.h syslog.h unistd.h])
+
+AC_CHECK_HEADERS([readline/readline.h readline/history.h],,
+    [AC_MSG_ERROR([readline headers are missing])]
+)
 
 AC_CHECK_HEADERS([corosync/cpg.h],
     [AC_SUBST([CPG_HEADER_PATH], [corosync/cpg.h])],

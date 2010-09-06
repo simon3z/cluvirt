@@ -31,6 +31,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include <libcman.h>
 
+#include <member.h>
+#include <interactive.h>
+
 #include <cluvirt.h>
 #include <utils.h>
 
@@ -40,6 +43,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define CMDLINE_OPT_VERSION     0x0002
 #define CMDLINE_OPT_DEBUG       0x0004
 #define CMDLINE_OPT_XMLOUT      0x0008
+#define CMDLINE_OPT_INTERACTIVE 0x0010
 
 
 typedef struct _clvadm_vmtable_t {
@@ -56,58 +60,6 @@ static int cmdline_flags;
 static clv_clnode_head_t     cn_head = STAILQ_HEAD_INITIALIZER(cn_head);
 static clvadm_vmtable_head_t vi_head = LIST_HEAD_INITIALIZER(vi_head);
 
-
-int member_init_list()
-{
-    int             node_count, i;
-    cman_handle_t   handle;
-    cman_node_t     *cman_nodes, local_node;
-    
-    if ((handle = cman_init(0)) == 0) {
-        log_error("unable to initialize cman: %i", errno);
-        return -1;
-    }
-    
-    if ((node_count = cman_get_node_count(handle)) < 0) {
-        log_error("unable to count cman nodes: %i", errno);
-        return -1;
-    }
-    
-    cman_nodes = calloc((size_t) node_count, sizeof(cman_node_t));
-    cman_get_nodes(handle, node_count, &node_count, cman_nodes);
-    
-    local_node.cn_name[0] = '\0'; /* init cn_name for cman_get_node */
-
-    if (cman_get_node(handle, CMAN_NODEID_US, &local_node) != 0) {
-        log_error("unable to get local node: %i", errno);
-        return -1;
-    }
-    
-    for (i = 0; i < node_count; i++) {
-        clv_clnode_t    *n;
-        
-        n = malloc(sizeof(clv_clnode_t));
-        STAILQ_INSERT_TAIL(&cn_head, n, next);
-
-        n->id           = (uint32_t) cman_nodes[i].cn_nodeid;
-        n->host         = strdup(cman_nodes[i].cn_name);
-        n->status       = 0;
-        
-        if (cman_nodes[i].cn_member != 0) {
-            n->status   |= CLUSTER_NODE_ONLINE;
-        }
-        
-        if (cman_nodes[i].cn_nodeid == local_node.cn_nodeid) {
-            n->status   |= CLUSTER_NODE_LOCAL;
-        }
-    }
-    
-    free(cman_nodes);
-    
-    cman_finish(handle);
-    
-    return 0;
-}
 
 char *uuid_to_string(unsigned char *uuid)
 {
@@ -143,10 +95,11 @@ void print_usage()
     printf("Usage: %s [OPTIONS]\n", PROGRAM_NAME);
     printf(
         "Virtual machines supervisor for openais cluster and libvirt.\n\n"
-        "  -h, --help                 display this help and exit\n"
-        "      --version              display version information and exit\n"
-        "  -x, --xml                  output in xml format\n"
-        "  -D                         debug output enabled\n"
+        "  -h, --help               display this help and exit\n"
+        "      --version            display version information and exit\n"
+        "  -x, --xml                output in xml format\n"
+        "  -i, --interactive        run in interactive mode\n"
+        "  -D                       debug output enabled\n"
     );
 }
 
@@ -154,16 +107,17 @@ void cmdline_options(int argc, char *argv[])
 {
     int c, option_index = 0;
     static struct option long_options[] = {
-        {"help",    no_argument,        0, 'h'},
-        {"version", no_argument,        0, 0},
-        {"xml",     no_argument,        0, 'x'},
+        {"help",    no_argument,    0, 'h'},
+        {"version", no_argument,    0, 0},
+        {"xml",     no_argument,    0, 'x'},
+        {"interactive", no_argument,    0, 'i'},
         {0, 0, 0, 0}
     };
 
     cmdline_flags = 0x00;
 
     while (1) {    
-        c = getopt_long(argc, argv, "hxD", long_options, &option_index);
+        c = getopt_long(argc, argv, "hxiD", long_options, &option_index);
     
         if (c == -1)
             break;
@@ -180,6 +134,10 @@ void cmdline_options(int argc, char *argv[])
                 
             case 'x':
                 cmdline_flags |= CMDLINE_OPT_XMLOUT;
+                break;
+
+            case 'i':
+                cmdline_flags |= CMDLINE_OPT_INTERACTIVE;
                 break;
 
             case 'D':
@@ -294,14 +252,17 @@ int main_loop(void)
 {
     clv_handle_t    clvh;
     clv_clnode_t    *n;
-    
-    member_init_list();
- 
+
+    if (member_list_nodes(&cn_head) < 0) {
+        log_error("unable to get cluster members: %i", errno);
+        exit(EXIT_FAILURE);
+    }
+
     if (clv_init(&clvh, CLV_SOCKET_PATH) < 0) {
         log_error("unable to initialize cluvirt socket: %i", errno);
         exit(EXIT_FAILURE);
     }
-    
+
     STAILQ_FOREACH(n, &cn_head, next) {
         clvadm_vmtable_t *t = malloc(sizeof(clvadm_vmtable_t));
         
@@ -350,7 +311,12 @@ int main(int argc, char *argv[])
         utils_debug = 0x01;
     }
     
-    main_loop();
+    if (cmdline_flags & CMDLINE_OPT_INTERACTIVE) {
+        interactive_loop();
+    }
+    else {
+        main_loop();
+    }
 
     return EXIT_SUCCESS; 
 }
