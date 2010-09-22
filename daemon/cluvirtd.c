@@ -106,42 +106,6 @@ void receive_message(
     }
 }
 
-void fork_daemon(void)
-{
-    pid_t pid, sid, devnull;
-
-    pid = fork();
-    
-    if (pid < 0) {
-        log_error("unable to fork the daemon: %i", errno);
-        exit(EXIT_FAILURE);
-    }
-
-    if (pid > 0) {
-        exit(EXIT_SUCCESS);
-    }
-
-    umask(0);
-
-    if ((sid = setsid()) < 0) {
-        log_error("unable to create a new session: %i", errno);
-        exit(EXIT_FAILURE);
-    }
-
-    if ((chdir("/")) < 0) {
-        log_error("unable to change working directory: %i", errno);
-        exit(EXIT_FAILURE);
-    }
-
-    if ((devnull = open(DEVNULL_PATH, O_RDWR)) < 0) {
-        log_error("unable to open %s: %i", DEVNULL_PATH, errno);
-    }
-    
-    dup2(devnull, 0);
-    dup2(devnull, 1);
-    dup2(devnull, 2);
-}
-
 void print_version()
 {
     printf("%s %s\n", PROGRAM_NAME, PACKAGE_VERSION);
@@ -341,7 +305,10 @@ int main(int argc, char *argv[])
     }
 
     if (cmdline_flags & CMDLINE_OPT_DAEMON) {
-        fork_daemon();
+        if (daemon(0, 0) != 0) {
+            log_error("unable to fork the daemon: %i", errno);
+            exit(EXIT_FAILURE);
+        }
     }
     
     if (cmdline_flags & CMDLINE_OPT_DEBUG) {
